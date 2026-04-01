@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Search, TrendingUp, BarChart3, Shield, Users, Clock, RotateCcw, CheckSquare, AlertTriangle, Activity, Zap } from 'lucide-react';
 import type { StockData } from '@/lib/types';
-import Sidebar from './sidebar';
+import SharedHeader from './shared-header';
 import StockOverview from './stock-overview';
 import MatrixAmpel from './matrix-ampel';
 import FundamentalAnalysis from './fundamental-analysis';
@@ -24,8 +24,8 @@ interface SearchResult {
   index: string;
 }
 
-export default function MatrixDashboard() {
-  const [ticker, setTicker] = useState('');
+export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?: string }) {
+  const [ticker, setTicker] = useState(initialTicker);
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,10 +133,16 @@ export default function MatrixDashboard() {
     { ticker: 'TSLA', label: 'Tesla' },
   ];
 
+  // Auto-fetch if initialTicker is provided
+  useEffect(() => {
+    if (initialTicker) fetchStock(initialTicker);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTicker]);
+
   return (
-    <div className="flex min-h-screen">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
-      <main className="flex-1 lg:ml-64 p-4 lg:p-6 pt-20 lg:pt-6">
+    <div className="min-h-screen bg-[#0a0e1a]">
+      <SharedHeader />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-12">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
