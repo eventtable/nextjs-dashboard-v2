@@ -1,5 +1,5 @@
 import MatrixDashboard from '@/components/matrix-dashboard';
 
-export default function HomePage() {
+export default function MatrixPage() {
   return <MatrixDashboard />;
 }

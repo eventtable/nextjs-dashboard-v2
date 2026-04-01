@@ -107,7 +107,7 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
     if (!group) return;
     setLoading(true);
     setPeers([]);
-    await loadPeerData(group.tickers, setPeers);
+    await loadPeerData(group.peers, setPeers);
     setLoading(false);
   };
 

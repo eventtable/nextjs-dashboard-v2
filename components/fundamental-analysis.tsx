@@ -60,7 +60,7 @@ export default function FundamentalAnalysis({ data }: { data: StockData }) {
     },
     {
       label: 'Gewinnmarge',
-      value: data?.profitMargins !== null ? `${formatNumber(data.profitMargins)}%` : 'N/A',
+      value: data?.profitMargin !== null ? `${formatNumber(data.profitMargin)}%` : 'N/A',
       status: '',
       statusColor: '',
       icon: DollarSign,

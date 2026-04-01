@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { peers } from '@/data/peers';
+import { PEERS as peers } from '@/data/peers';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
