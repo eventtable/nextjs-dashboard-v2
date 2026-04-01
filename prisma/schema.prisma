@@ -1,0 +1,51 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/aktien_matrix/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  isAdmin   Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  depot     Depot?
+}
+
+model InviteCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  maxUses   Int      @default(5)
+  usedCount Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  createdBy String
+}
+
+model Depot {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions String   // JSON string
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  email        String
+  name         String?
+  loginAt      DateTime @default(now())
+  lastActiveAt DateTime @updatedAt
+  ipAddress    String?
+  isActive     Boolean  @default(true)
+}
