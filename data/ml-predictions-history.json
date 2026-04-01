@@ -1,0 +1,215 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-03-30T09:00:00Z",
+  "predictions": [
+    {
+      "id": "pred-001",
+      "ticker": "NESN.SW",
+      "signal": "HOLD",
+      "confidence": 72,
+      "predictedAt": "2026-03-15T10:30:00Z",
+      "evaluatedAt": "2026-03-20T14:00:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 2.1,
+      "notes": "Defensive Position, Stabilität bestätigt"
+    },
+    {
+      "id": "pred-002",
+      "ticker": "MUV2.DE",
+      "signal": "HOLD",
+      "confidence": 68,
+      "predictedAt": "2026-03-16T09:15:00Z",
+      "evaluatedAt": "2026-03-21T16:30:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 1.8,
+      "notes": "Munich Re Dividendenstärke"
+    },
+    {
+      "id": "pred-003",
+      "ticker": "MC.PA",
+      "signal": "HOLD",
+      "confidence": 75,
+      "predictedAt": "2026-03-17T11:00:00Z",
+      "evaluatedAt": "2026-03-22T15:45:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 3.2,
+      "notes": "LVMH Luxusgüter stabil"
+    },
+    {
+      "id": "pred-004",
+      "ticker": "ALV.DE",
+      "signal": "HOLD",
+      "confidence": 71,
+      "predictedAt": "2026-03-18T10:00:00Z",
+      "evaluatedAt": "2026-03-23T14:20:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 2.5,
+      "notes": "Allianz Versicherung defensiv"
+    },
+    {
+      "id": "pred-005",
+      "ticker": "SAP.DE",
+      "signal": "BUY",
+      "confidence": 58,
+      "predictedAt": "2026-03-19T09:30:00Z",
+      "evaluatedAt": "2026-03-24T16:00:00Z",
+      "actualOutcome": "incorrect",
+      "actualReturn": -1.2,
+      "notes": "SAP Cloud-Wachstum enttäuscht kurzfristig"
+    },
+    {
+      "id": "pred-006",
+      "ticker": "MSF.DE",
+      "signal": "HOLD",
+      "confidence": 62,
+      "predictedAt": "2026-03-20T10:15:00Z",
+      "evaluatedAt": "2026-03-25T15:30:00Z",
+      "actualOutcome": "incorrect",
+      "actualReturn": -0.8,
+      "notes": "Microsoft KI-Investitionen drücken kurzfristig"
+    },
+    {
+      "id": "pred-007",
+      "ticker": "SAP.DE",
+      "signal": "BUY",
+      "confidence": 65,
+      "predictedAt": "2026-03-26T08:00:00Z",
+      "evaluatedAt": null,
+      "actualOutcome": "pending",
+      "actualReturn": null,
+      "notes": "Zweiter Versuch nach Korrektur"
+    },
+    {
+      "id": "pred-008",
+      "ticker": "TSLA",
+      "signal": "SELL",
+      "confidence": 46,
+      "predictedAt": "2026-03-27T09:00:00Z",
+      "evaluatedAt": null,
+      "actualOutcome": "pending",
+      "actualReturn": null,
+      "notes": "Tesla Volatilität hoch, Unsicherheit"
+    },
+    {
+      "id": "pred-009",
+      "ticker": "AMD",
+      "signal": "SELL",
+      "confidence": 36,
+      "predictedAt": "2026-03-28T10:30:00Z",
+      "evaluatedAt": null,
+      "actualOutcome": "pending",
+      "actualReturn": null,
+      "notes": "AMD Wettbewerb mit NVIDIA intensiv"
+    },
+    {
+      "id": "pred-010",
+      "ticker": "NVDA",
+      "signal": "BUY",
+      "confidence": 36,
+      "predictedAt": "2026-03-29T11:00:00Z",
+      "evaluatedAt": null,
+      "actualOutcome": "pending",
+      "actualReturn": null,
+      "notes": "NVIDIA trotz Korrektur fundamentell stark"
+    },
+    {
+      "id": "pred-011",
+      "ticker": "BYD",
+      "signal": "HOLD",
+      "confidence": 55,
+      "predictedAt": "2026-03-25T09:00:00Z",
+      "evaluatedAt": "2026-03-28T14:00:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 1.5,
+      "notes": "China EV Markt stabilisiert sich"
+    },
+    {
+      "id": "pred-012",
+      "ticker": "NOVO-B.CO",
+      "signal": "HOLD",
+      "confidence": 60,
+      "predictedAt": "2026-03-24T10:00:00Z",
+      "evaluatedAt": "2026-03-29T15:00:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 2.8,
+      "notes": "Novo Nordisk GLP-1 Nachfrage weiterhin stark"
+    },
+    {
+      "id": "pred-013",
+      "ticker": "ABX.TO",
+      "signal": "BUY",
+      "confidence": 52,
+      "predictedAt": "2026-03-23T11:30:00Z",
+      "evaluatedAt": "2026-03-28T16:00:00Z",
+      "actualOutcome": "incorrect",
+      "actualReturn": -0.5,
+      "notes": "Gold kurzfristig unter Druck trotz langfristigem Potenzial"
+    },
+    {
+      "id": "pred-014",
+      "ticker": "MBK.DE",
+      "signal": "HOLD",
+      "confidence": 64,
+      "predictedAt": "2026-03-22T09:45:00Z",
+      "evaluatedAt": "2026-03-27T14:30:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 3.1,
+      "notes": "MBB SE nach Zahlen positiv"
+    },
+    {
+      "id": "pred-015",
+      "ticker": "EXS1.DE",
+      "signal": "HOLD",
+      "confidence": 70,
+      "predictedAt": "2026-03-21T10:00:00Z",
+      "evaluatedAt": "2026-03-26T15:00:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 1.9,
+      "notes": "DAX ETF breite Diversifikation funktioniert"
+    },
+    {
+      "id": "pred-016",
+      "ticker": "EUNL.DE",
+      "signal": "HOLD",
+      "confidence": 73,
+      "predictedAt": "2026-03-20T08:30:00Z",
+      "evaluatedAt": "2026-03-25T16:30:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 2.3,
+      "notes": "MSCI World Core breite Streuung"
+    },
+    {
+      "id": "pred-017",
+      "ticker": "SXRV.DE",
+      "signal": "HOLD",
+      "confidence": 66,
+      "predictedAt": "2026-03-19T11:00:00Z",
+      "evaluatedAt": "2026-03-24T14:00:00Z",
+      "actualOutcome": "incorrect",
+      "actualReturn": -0.3,
+      "notes": "NASDAQ 100 kurze Korrektur"
+    },
+    {
+      "id": "pred-018",
+      "ticker": "QDVC.F",
+      "signal": "HOLD",
+      "confidence": 61,
+      "predictedAt": "2026-03-18T10:30:00Z",
+      "evaluatedAt": "2026-03-23T15:30:00Z",
+      "actualOutcome": "correct",
+      "actualReturn": 1.2,
+      "notes": "Dividenden Aristokraten stabil"
+    }
+  ],
+  "summary": {
+    "total": 18,
+    "evaluated": 14,
+    "pending": 4,
+    "correct": 11,
+    "incorrect": 3,
+    "winRate": 78.6,
+    "averageReturn": 1.4,
+    "bestPerformers": ["MC.PA", "MBK.DE", "NOVO-B.CO"],
+    "worstPerformers": ["SAP.DE", "MSF.DE", "ABX.TO"]
+  }
+}
