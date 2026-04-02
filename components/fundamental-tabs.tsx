@@ -184,10 +184,14 @@ function TabBewertungCard({
 // Gesamtbewertungs-Komponente
 function GesamtBewertungCard({ bewertung }: { bewertung: GesamtBewertung }) {
   const empfehlungConfig = {
-    'KAUFEN': { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: TrendingUp, color: 'text-emerald-400' },
-    'HALTEN': { bg: 'bg-yellow-500/20', border: 'border-yellow-500/30', icon: MinusCircle, color: 'text-yellow-400' },
-    'VERKAUFEN': { bg: 'bg-red-500/20', border: 'border-red-500/30', icon: TrendingDown, color: 'text-red-400' }
-  };
+    'STARK':  { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: TrendingUp,   color: 'text-emerald-400' },
+    'SOLIDE': { bg: 'bg-yellow-500/20',  border: 'border-yellow-500/30',  icon: MinusCircle,  color: 'text-yellow-400'  },
+    'SCHWACH':{ bg: 'bg-red-500/20',     border: 'border-red-500/30',     icon: TrendingDown, color: 'text-red-400'     },
+    // legacy fallbacks
+    'KAUFEN':   { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', icon: TrendingUp,   color: 'text-emerald-400' },
+    'HALTEN':   { bg: 'bg-yellow-500/20',  border: 'border-yellow-500/30',  icon: MinusCircle,  color: 'text-yellow-400'  },
+    'VERKAUFEN':{ bg: 'bg-red-500/20',     border: 'border-red-500/30',     icon: TrendingDown, color: 'text-red-400'     },
+  } as Record<string, { bg: string; border: string; icon: typeof TrendingUp; color: string }>;
   
   const config = empfehlungConfig[bewertung.empfehlung];
   const Icon = config.icon;
@@ -203,8 +207,8 @@ function GesamtBewertungCard({ bewertung }: { bewertung: GesamtBewertung }) {
             <Award className="w-6 h-6 text-[#f0b90b]" />
           </div>
           <div>
-            <h4 className="text-lg font-bold text-white">Gesamtbewertung</h4>
-            <p className="text-sm text-gray-400">Basierend auf {bewertung.totalKennzahlen} Kennzahlen</p>
+            <h4 className="text-lg font-bold text-white">Fundamental-Qualität</h4>
+            <p className="text-sm text-gray-400">Basierend auf {bewertung.totalKennzahlen} Kennzahlen · keine Kaufempfehlung</p>
           </div>
         </div>
         

@@ -41,7 +41,7 @@ export interface GesamtBewertung {
   schlecht: number;
   rating?: 'GUT' | 'MITTEL' | 'SCHLECHT';
   farbe: string;
-  empfehlung: 'KAUFEN' | 'HALTEN' | 'VERKAUFEN';
+  empfehlung: 'STARK' | 'SOLIDE' | 'SCHWACH';
   // legacy fields
   score?: number;
   status?: KennzahlStatus;

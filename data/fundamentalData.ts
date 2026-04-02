@@ -427,15 +427,15 @@ export function berechneTabBewertung(kennzahlen: KennzahlBewertung[]): TabBewert
   if (durchschnittsPunkte >= 1.5) {
     rating = 'GUT';
     farbe = '#22c55e';
-    empfehlung = 'KAUFEN';
+    empfehlung = 'STARK';
   } else if (durchschnittsPunkte >= 0.8) {
     rating = 'MITTEL';
     farbe = '#eab308';
-    empfehlung = 'HALTEN';
+    empfehlung = 'SOLIDE';
   } else {
     rating = 'SCHLECHT';
     farbe = '#ef4444';
-    empfehlung = 'VERKAUFEN';
+    empfehlung = 'SCHWACH';
   }
   
   return {
@@ -481,20 +481,20 @@ export function berechneGesamtBewertung(
   
   let rating: 'GUT' | 'MITTEL' | 'SCHLECHT';
   let farbe: string;
-  let empfehlung: 'KAUFEN' | 'HALTEN' | 'VERKAUFEN';
-  
+  let empfehlung: 'STARK' | 'SOLIDE' | 'SCHWACH';
+
   if (gewichteterScore >= 1.4) {
     rating = 'GUT';
     farbe = '#22c55e';
-    empfehlung = 'KAUFEN';
+    empfehlung = 'STARK';
   } else if (gewichteterScore >= 0.9) {
     rating = 'MITTEL';
     farbe = '#eab308';
-    empfehlung = 'HALTEN';
+    empfehlung = 'SOLIDE';
   } else {
     rating = 'SCHLECHT';
     farbe = '#ef4444';
-    empfehlung = 'VERKAUFEN';
+    empfehlung = 'SCHWACH';
   }
   
   return {

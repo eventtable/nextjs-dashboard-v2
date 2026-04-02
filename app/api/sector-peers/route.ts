@@ -35,6 +35,12 @@ const HEDGING_MAP: Record<string, Array<{ ticker: string; name: string; sector: 
     { ticker: 'AAPL', name: 'Apple', sector: 'Big Tech', reason: 'Tech-Wachstum gegensätzlich zu Gold' },
     { ticker: 'JPM', name: 'JPMorgan Chase', sector: 'Financials', reason: 'Zinsen schaden Gold, helfen Banken' },
   ],
+  'Technology': [
+    { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Energie läuft gegensätzlich zu Tech' },
+    { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Safe-Haven bei Tech-Korrektur' },
+    { ticker: 'KO', name: 'Coca-Cola', sector: 'Consumer Staples', reason: 'Defensiv, niedrige Korrelation' },
+    { ticker: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare', reason: 'Healthcare läuft in Rezessionen gut' },
+  ],
   'Pharma (Diabetes/Obesity)': [
     { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Zyklisch vs. defensiv' },
     { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech-Wachstum vs. defensives Healthcare' },
@@ -50,8 +56,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sector: null, sectorLabel: null, peers: [], hedgingPairs: [] });
   }
 
-  // Look up in our PEERS data
-  const peerInfo = PEERS[ticker];
+  // Look up in our PEERS data — try exact ticker first, then strip exchange suffix
+  const tickerBase = ticker.replace(/\.(DE|PA|CO|L|AS|MI|MC|SW)$/i, '');
+  const peerInfo = PEERS[ticker] ?? PEERS[tickerBase];
 
   if (peerInfo) {
     const branche = peerInfo.branche;
