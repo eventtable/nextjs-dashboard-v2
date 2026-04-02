@@ -67,10 +67,14 @@ export async function GET(_req: NextRequest) {
       .filter(p => p.ticker === p.isin)
       .reduce((s, p) => s + p.wertEur, 0);
 
-    // Build date → total portfolio value map
-    // Method: for each day, each stock contributes wertEur × (close_d / referenceClose)
-    // This "replays" the stock's price movement applied to the current EUR position size.
+    // Total stock wertEur (bonds excluded — they're added as static later)
+    const totalStockWertEur = depotPositionen
+      .filter(p => p.ticker !== p.isin)
+      .reduce((s, p) => s + p.wertEur, 0);
+
+    // Build date → { value, coveredWertEur } map
     const dateMap: Record<string, number> = {};
+    const dateCoverage: Record<string, number> = {};
 
     for (const r of results) {
       if (r.status !== 'fulfilled' || !r.value) continue;
@@ -80,16 +84,20 @@ export async function GET(_req: NextRequest) {
         const close = closes[i];
         if (!close) continue;
 
-        // Skip obvious bad data points (individual spikes)
+        // Skip bad data points: outside 4×/0.25× of stored reference
         if (close > storedRef * 4 || close < storedRef * 0.25) continue;
 
         const date = new Date(timestamps[i] * 1000).toISOString().split('T')[0];
-        const contribution = wertEur * (close / referenceClose);
-        dateMap[date] = (dateMap[date] ?? 0) + contribution;
+        dateMap[date] = (dateMap[date] ?? 0) + wertEur * (close / referenceClose);
+        dateCoverage[date] = (dateCoverage[date] ?? 0) + wertEur;
       }
     }
 
-    const sortedDates = Object.keys(dateMap).sort();
+    // Only keep dates where ≥85% of the stock portfolio has price data.
+    // Days with missing positions cause artificial dips — skip them.
+    const sortedDates = Object.keys(dateMap)
+      .filter(d => (dateCoverage[d] ?? 0) / totalStockWertEur >= 0.85)
+      .sort();
 
     // Expected annual dividends per position (approximate yield, for context)
     const KNOWN_DIV_YIELDS: Record<string, number> = {

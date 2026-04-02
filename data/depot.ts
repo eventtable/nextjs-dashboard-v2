@@ -146,8 +146,8 @@ export const depotPositionen: Position[] = [
     id: '15', name: 'AIS-Amundi MSCI Emerging Markets', shortName: 'Emerging Markets',
     ticker: 'PAEEM.PA', isin: 'LU1681045370', typ: 'ETF',
     category: 'etf', strategy: 'etf', currency: 'EUR', lagerland: 'Frankreich',
-    stueck: 42, kursProStueck: 6.34, einstandKurs: 6.70,
-    wertEur: 266.28, gewinnEur: -15.12, performanceProzent: -5.4,
+    stueck: 42, kursProStueck: 6.46, einstandKurs: 6.70,
+    wertEur: 271.41, gewinnEur: -10.08, performanceProzent: -3.6,
   },
   // ── Anleihe ───────────────────────────────────────────────────────────────
   {
