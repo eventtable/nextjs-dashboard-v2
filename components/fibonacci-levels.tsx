@@ -56,10 +56,10 @@ export default function FibonacciLevels({ high52w, low52w, currentPrice, currenc
   const fibLevels = calculateFibonacciLevels(high52w, low52w);
   const currentPosition = getCurrentFibPosition(currentPrice, high52w, low52w);
   
-  // Calculate progress within the 52W range
-  const progress = ((high52w - currentPrice) / (high52w - low52w)) * 100;
-  const isNearSupport = progress > 60;
-  const isNearResistance = progress < 20;
+  // Progress: 0% = Low (links), 100% = High (rechts)
+  const progress = ((currentPrice - low52w) / (high52w - low52w)) * 100;
+  const isNearSupport = progress < 40;      // Preis im unteren 40% der Range → nahe Support
+  const isNearResistance = progress > 80;   // Preis im oberen 20% der Range → nahe Widerstand
 
   return (
     <div className="glass-card rounded-xl p-5 border border-[#1a1f37]">
@@ -92,7 +92,7 @@ export default function FibonacciLevels({ high52w, low52w, currentPrice, currenc
             <div
               key={fib.level}
               className="absolute top-0 w-0.5 h-full bg-[#f0b90b]/30"
-              style={{ left: `${fib.level * 100}%` }}
+              style={{ left: `${(1 - fib.level) * 100}%` }}
             />
           ))}
           
