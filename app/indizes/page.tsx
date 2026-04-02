@@ -261,17 +261,14 @@ export default function IndizesPage() {
           <div className="space-y-5">
             {indices.length > 0 && <MarketMood indices={indices} />}
 
-            {/* All indices in one tight tile grid, with region labels inline */}
-            {orderedGroups.map(region => (
-              <div key={region}>
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">{region}</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-                  {grouped[region].map(idx => (
-                    <IndexCard key={idx.symbol} idx={idx} showFib={showFib} />
-                  ))}
-                </div>
-              </div>
-            ))}
+            {/* All indices in one flat grid – like a chocolate bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+              {orderedGroups.flatMap(region =>
+                grouped[region].map(idx => (
+                  <IndexCard key={idx.symbol} idx={idx} showFib={showFib} />
+                ))
+              )}
+            </div>
           </div>
         )}
       </main>
