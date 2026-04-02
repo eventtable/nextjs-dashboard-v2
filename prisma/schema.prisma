@@ -45,6 +45,7 @@ model SmartMoneyCache {
   createdAt DateTime @default(now())
 }
 
+model Session {
   id           String   @id @default(cuid())
   userId       String
   email        String
