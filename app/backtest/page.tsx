@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import SharedHeader from '@/components/shared-header';
-import { BarChart3, Play, Info, Search, X } from 'lucide-react';
+import { BarChart3, Play, Info, Search, X, ChevronDown, ChevronUp, TrendingUp, BarChart2, Shield, Zap, BookOpen } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -123,6 +123,7 @@ export default function BacktestPage() {
   };
 
   const activeTicker = selectedTicker || tickerInput.trim().toUpperCase();
+  const [showExplainer, setShowExplainer] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
@@ -135,6 +136,98 @@ export default function BacktestPage() {
             Backtest-Engine
           </h1>
           <p className="text-gray-400 text-sm mt-1">Teste Handelsstrategien auf historischen Daten – für beliebige Aktien &amp; ETFs</p>
+        </div>
+
+        {/* Explainer */}
+        <div className="glass-card rounded-xl border border-[#1a1f37] overflow-hidden">
+          <button
+            onClick={() => setShowExplainer(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-white/5 transition-colors"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium text-gray-300">
+              <BookOpen className="w-4 h-4 text-[#f0b90b]" />
+              Wie funktioniert die Backtest-Engine? Was ist der Benchmark?
+            </span>
+            {showExplainer ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+          </button>
+
+          {showExplainer && (
+            <div className="px-5 pb-5 border-t border-[#1a1f37] space-y-5 text-sm text-gray-400">
+
+              {/* Simulation disclaimer */}
+              <div className="mt-4 flex gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                <Info className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+                <p className="text-yellow-300 text-xs leading-relaxed">
+                  <strong>Hinweis:</strong> Die Engine simuliert Strategierenditen auf Basis statistischer Muster (Trendstärke, Volatilität, historische Sektorrenditen) – keine Live-Daten aus einer echten Kursdatenbank. Die Ergebnisse dienen zur Orientierung, nicht als Handelsempfehlung.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-1">
+                {/* Left column */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-white font-semibold mb-1.5 flex items-center gap-2">
+                      <BarChart2 className="w-4 h-4 text-[#f0b90b]" /> Was macht der Backtest?
+                    </h4>
+                    <p className="leading-relaxed text-xs">
+                      Ein Backtest fragt: <em>"Wie hätte sich mein Portfolio entwickelt, wenn ich diese Strategie in der Vergangenheit angewendet hätte?"</em> Du wählst eine Handelsstrategie (z.B. RSI-Strategie), eine Aktie und einen Zeitraum. Die Engine berechnet monatliche Renditen und zeigt dir, wie dein Startkapital gewachsen oder gefallen wäre.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white font-semibold mb-1.5 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-[#f0b90b]" /> Was ist der Benchmark (SPY)?
+                    </h4>
+                    <p className="leading-relaxed text-xs">
+                      Der <strong className="text-white">Benchmark</strong> ist der <strong className="text-white">S&amp;P 500 ETF (SPY)</strong> – der bekannteste Aktienindex der Welt mit 500 US-Großunternehmen. Er gilt als "Marktdurchschnitt". <br /><br />
+                      Die gestrichelte blaue Linie zeigt: <em>Was hättest du verdient, wenn du einfach nur SPY gekauft und gehalten hättest?</em><br /><br />
+                      <strong className="text-white">"vs. Benchmark"</strong> zeigt, ob deine Strategie den Markt <em>geschlagen</em> hat (+) oder <em>schlechter</em> abgeschnitten hat (−). Den Markt dauerhaft zu schlagen ist auch für Profis sehr schwer.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-white font-semibold mb-1.5 flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-[#f0b90b]" /> Die 4 Strategien erklärt
+                    </h4>
+                    <ul className="space-y-2 text-xs">
+                      <li className="flex gap-2">
+                        <span className="text-[#f0b90b] font-bold shrink-0">MA-Crossover:</span>
+                        <span>Kaufen wenn der 50-Tage-Durchschnitt über den 200-Tage-Durchschnitt steigt (goldenes Kreuz), verkaufen beim Umkehrschluss. Folgt dem Trend.</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="text-[#f0b90b] font-bold shrink-0">RSI-Strategie:</span>
+                        <span>RSI misst Über-/Untertreibungen. Kaufen bei RSI &lt; 30 (Aktie überverkauft, günstig), verkaufen bei RSI &gt; 70 (überkauft, teuer). Contrarian-Ansatz.</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="text-[#f0b90b] font-bold shrink-0">Buy &amp; Hold:</span>
+                        <span>Einmaliger Kauf am Startdatum, kein weiterer Handel. Einfachste Strategie – schlägt aktive Strategien oft langfristig.</span>
+                      </li>
+                      <li className="flex gap-2">
+                        <span className="text-[#f0b90b] font-bold shrink-0">Momentum:</span>
+                        <span>Kaufen wenn die Aktie in den letzten 3 Monaten gestiegen ist, verkaufen bei negativem Trend. "The trend is your friend."</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="text-white font-semibold mb-1.5 flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-[#f0b90b]" /> Kennzahlen-Glossar
+                    </h4>
+                    <ul className="space-y-1.5 text-xs">
+                      <li><span className="text-white font-medium">Gesamtrendite:</span> Gesamte %-Veränderung über den gesamten Zeitraum.</li>
+                      <li><span className="text-white font-medium">Jahresrendite (CAGR):</span> Durchschnittliche jährliche Rendite, vergleichbar zwischen verschiedenen Zeiträumen.</li>
+                      <li><span className="text-white font-medium">Max. Drawdown:</span> Größter Verlust vom Höchststand. Misst das Worst-Case-Risiko.</li>
+                      <li><span className="text-white font-medium">Sharpe Ratio:</span> Rendite pro Risikoeinheit. &gt;1 = gut, &gt;2 = sehr gut, &lt;1 = schlechte Risikobereinigung.</li>
+                      <li><span className="text-white font-medium">Trades:</span> Anzahl der Kauf-/Verkaufssignale. Hohe Anzahl = höhere Transaktionskosten in der Realität.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Config */}
