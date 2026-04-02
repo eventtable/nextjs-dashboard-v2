@@ -18,7 +18,8 @@ const INDICES = [
 ];
 
 async function fetchIndex(symbol: string) {
-  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=3mo`;
+  // Fetch 1 year of daily data for full chart + Fibonacci
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1y`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
     signal: AbortSignal.timeout(8000),
@@ -32,7 +33,7 @@ async function fetchIndex(symbol: string) {
   const closes: number[] = result.indicators?.quote?.[0]?.close ?? [];
   const timestamps: number[] = result.timestamp ?? [];
 
-  // Build sparkline (last 60 days, filter nulls)
+  // Build full year chart, filter nulls
   const sparkline: { t: number; v: number }[] = [];
   for (let i = 0; i < closes.length; i++) {
     if (closes[i] != null) sparkline.push({ t: timestamps[i], v: closes[i] });
@@ -44,13 +45,20 @@ async function fetchIndex(symbol: string) {
 
   // 1M and 3M change
   const first = sparkline[0]?.v ?? price;
-  const midIdx = Math.floor(sparkline.length / 2);
-  const mid = sparkline[midIdx]?.v ?? price;
-  const change1M = mid ? ((price - mid) / mid) * 100 : 0;
-  const change3M = first ? ((price - first) / first) * 100 : 0;
+  const qIdx = Math.floor(sparkline.length * 0.75); // ~3M ago
+  const mid = sparkline[qIdx]?.v ?? price;
+  const change1M = sparkline[sparkline.length > 22 ? sparkline.length - 22 : 0]?.v
+    ? ((price - sparkline[sparkline.length > 22 ? sparkline.length - 22 : 0].v) / sparkline[sparkline.length > 22 ? sparkline.length - 22 : 0].v) * 100
+    : 0;
+  const change3M = mid ? ((price - mid) / mid) * 100 : 0;
+  const changeYTD = first ? ((price - first) / first) * 100 : 0;
+
+  // 52-week high/low for Fibonacci
+  const validCloses = sparkline.map(s => s.v);
+  const high52w = Math.max(...validCloses);
+  const low52w  = Math.min(...validCloses);
 
   // Simple trend: MA20 vs MA50
-  const validCloses = sparkline.map(s => s.v);
   const ma20 = validCloses.length >= 20
     ? validCloses.slice(-20).reduce((a, b) => a + b, 0) / 20
     : price;
@@ -73,11 +81,14 @@ async function fetchIndex(symbol: string) {
     changeDay,
     change1M,
     change3M,
+    changeYTD,
     trend,
     trendLabel,
     ma20,
     ma50,
-    sparkline: sparkline.slice(-60),
+    high52w,
+    low52w,
+    sparkline, // full year
     currency: meta.currency ?? '',
   };
 }
