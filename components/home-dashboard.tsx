@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   Search, TrendingUp, BarChart3, Shield, Wallet, Zap,
   AlertTriangle, Activity, ArrowUpRight, ArrowDownRight,
@@ -70,6 +71,7 @@ const quickNavCards = [
 
 export default function HomeDashboard() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -140,22 +142,24 @@ export default function HomeDashboard() {
               Professionelle Aktienanalyse · Live-Marktdaten · KI-gestützte Signale
             </p>
           </div>
-          <div className="glass-card rounded-xl px-5 py-3 flex items-center gap-4">
-            <div>
-              <p className="text-xs text-gray-500">Portfolio-Wert</p>
-              <p className="text-xl font-bold text-white">
-                {isLoading ? '...' : `€${totalValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              </p>
-            </div>
-            {!isLoading && (
-              <div className={`flex items-center gap-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                <span className="text-sm font-semibold">
-                  {isPositive ? '+' : ''}{totalChangePercent.toFixed(2)}%
-                </span>
+          {session && (
+            <div className="glass-card rounded-xl px-5 py-3 flex items-center gap-4">
+              <div>
+                <p className="text-xs text-gray-500">Portfolio-Wert</p>
+                <p className="text-xl font-bold text-white">
+                  {isLoading ? '...' : `€${totalValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                </p>
               </div>
-            )}
-          </div>
+              {!isLoading && (
+                <div className={`flex items-center gap-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                  {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                  <span className="text-sm font-semibold">
+                    {isPositive ? '+' : ''}{totalChangePercent.toFixed(2)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Quick Search */}
@@ -252,39 +256,52 @@ export default function HomeDashboard() {
                 <Wallet className="w-5 h-5 text-[#f0b90b]" />
                 Depot-Übersicht
               </h3>
-              <Link href="/depot" className="text-xs text-[#f0b90b] hover:underline flex items-center gap-1">
-                Vollansicht <ChevronRight className="w-3 h-3" />
-              </Link>
+              {session && (
+                <Link href="/depot" className="text-xs text-[#f0b90b] hover:underline flex items-center gap-1">
+                  Vollansicht <ChevronRight className="w-3 h-3" />
+                </Link>
+              )}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div className="bg-[#1a1f37] rounded-lg p-3">
-                <p className="text-xs text-gray-500">Gesamtwert</p>
-                <p className="text-lg font-bold text-white mt-1">
-                  {isLoading ? '...' : `€${totalValue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-                </p>
+            {session ? (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="bg-[#1a1f37] rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Gesamtwert</p>
+                    <p className="text-lg font-bold text-white mt-1">
+                      {isLoading ? '...' : `€${totalValue.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                    </p>
+                  </div>
+                  <div className="bg-[#1a1f37] rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Tagesveränderung</p>
+                    <p className={`text-lg font-bold mt-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                      {isLoading ? '...' : `${isPositive ? '+' : ''}${totalChangePercent.toFixed(2)}%`}
+                    </p>
+                  </div>
+                  <div className="bg-[#1a1f37] rounded-lg p-3">
+                    <p className="text-xs text-gray-500">Strategie</p>
+                    <p className="text-lg font-bold text-[#f0b90b] mt-1">7 aktiv</p>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-3 flex-wrap">
+                  <Link href="/depot" className="text-xs px-4 py-2 bg-[#f0b90b]/10 border border-[#f0b90b]/20 text-[#f0b90b] rounded-lg hover:bg-[#f0b90b]/20 transition-all">
+                    Positionen ansehen
+                  </Link>
+                  <Link href="/empfehlungen" className="text-xs px-4 py-2 bg-[#1a1f37] border border-[#2a2f47] text-gray-300 rounded-lg hover:bg-[#2a2f47] transition-all">
+                    Nachkauf-Empfehlungen
+                  </Link>
+                  <Link href="/risiko" className="text-xs px-4 py-2 bg-[#1a1f37] border border-[#2a2f47] text-gray-300 rounded-lg hover:bg-[#2a2f47] transition-all">
+                    Risiko-Analyse
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-500 text-sm mb-3">Melde dich an, um dein Depot zu sehen</p>
+                <Link href="/login" className="text-xs px-4 py-2 bg-[#f0b90b]/10 border border-[#f0b90b]/20 text-[#f0b90b] rounded-lg hover:bg-[#f0b90b]/20 transition-all">
+                  Zum Login
+                </Link>
               </div>
-              <div className="bg-[#1a1f37] rounded-lg p-3">
-                <p className="text-xs text-gray-500">Tagesveränderung</p>
-                <p className={`text-lg font-bold mt-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                  {isLoading ? '...' : `${isPositive ? '+' : ''}${totalChangePercent.toFixed(2)}%`}
-                </p>
-              </div>
-              <div className="bg-[#1a1f37] rounded-lg p-3">
-                <p className="text-xs text-gray-500">Strategie</p>
-                <p className="text-lg font-bold text-[#f0b90b] mt-1">7 aktiv</p>
-              </div>
-            </div>
-            <div className="mt-4 flex gap-3 flex-wrap">
-              <Link href="/depot" className="text-xs px-4 py-2 bg-[#f0b90b]/10 border border-[#f0b90b]/20 text-[#f0b90b] rounded-lg hover:bg-[#f0b90b]/20 transition-all">
-                Positionen ansehen
-              </Link>
-              <Link href="/empfehlungen" className="text-xs px-4 py-2 bg-[#1a1f37] border border-[#2a2f47] text-gray-300 rounded-lg hover:bg-[#2a2f47] transition-all">
-                Nachkauf-Empfehlungen
-              </Link>
-              <Link href="/risiko" className="text-xs px-4 py-2 bg-[#1a1f37] border border-[#2a2f47] text-gray-300 rounded-lg hover:bg-[#2a2f47] transition-all">
-                Risiko-Analyse
-              </Link>
-            </div>
+            )}
           </div>
 
           {/* Further Links */}
