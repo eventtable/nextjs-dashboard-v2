@@ -1,4 +1,7 @@
+'use client';
+
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface PortfolioData {
   totalValue: number;
@@ -9,8 +12,11 @@ interface PortfolioData {
 }
 
 export function usePortfolio(): PortfolioData {
+  const { data: session, status } = useSession();
+  const isAdmin = (session?.user as any)?.isAdmin === true;
+
   const [data, setData] = useState<PortfolioData>({
-    totalValue: 8659.05, // Default fallback
+    totalValue: 0,
     totalChange: 0,
     totalChangePercent: 0,
     isLoading: true,
@@ -18,6 +24,15 @@ export function usePortfolio(): PortfolioData {
   });
 
   useEffect(() => {
+    // Still loading session — wait
+    if (status === 'loading') return;
+
+    // Non-admin users always see 0
+    if (!isAdmin) {
+      setData({ totalValue: 0, totalChange: 0, totalChangePercent: 0, isLoading: false, error: null });
+      return;
+    }
+
     const fetchPortfolio = async () => {
       try {
         // Try to get from localStorage first (sync with depot page)
@@ -25,13 +40,7 @@ export function usePortfolio(): PortfolioData {
         if (stored) {
           const positions = JSON.parse(stored);
           const total = positions.reduce((sum: number, pos: any) => sum + (pos.wertEur || 0), 0);
-          setData({
-            totalValue: total,
-            totalChange: 0,
-            totalChangePercent: 0,
-            isLoading: false,
-            error: null,
-          });
+          setData({ totalValue: total, totalChange: 0, totalChangePercent: 0, isLoading: false, error: null });
           return;
         }
 
@@ -44,38 +53,22 @@ export function usePortfolio(): PortfolioData {
         Object.values(prices).forEach((p: any) => {
           if (p?.valueEur) totalVal += p.valueEur;
         });
-        setData({
-          totalValue: totalVal || 8659.05,
-          totalChange: 0,
-          totalChangePercent: 0,
-          isLoading: false,
-          error: null,
-        });
+        setData({ totalValue: totalVal || 0, totalChange: 0, totalChangePercent: 0, isLoading: false, error: null });
       } catch (err) {
-        // On error, keep default value but stop loading
-        setData(prev => ({
-          ...prev,
-          isLoading: false,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        }));
+        setData(prev => ({ ...prev, isLoading: false, error: err instanceof Error ? err.message : 'Unknown error' }));
       }
     };
 
     fetchPortfolio();
 
-    // Listen for storage changes (when depot is updated)
-    const handleStorageChange = () => {
-      fetchPortfolio();
-    };
-
+    const handleStorageChange = () => fetchPortfolio();
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('depotUpdated', handleStorageChange);
-
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('depotUpdated', handleStorageChange);
     };
-  }, []);
+  }, [status, isAdmin]);
 
   return data;
 }
