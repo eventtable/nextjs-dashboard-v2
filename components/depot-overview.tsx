@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { Wallet, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, CheckCircle, Info, ArrowRight, Shield, Layers, BarChart3 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from 'recharts';
+import { Wallet, TrendingUp, TrendingDown, RefreshCw, AlertTriangle, CheckCircle, Info, Shield, Layers, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
 import { STRATEGY_CONFIG, CATEGORY_LABELS } from '@/lib/depot-data';
 import type { StrategyType, AssetCategory } from '@/lib/depot-data';
 
@@ -43,10 +44,30 @@ function formatPercent(v: number): string {
 }
 
 export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: string) => void }) {
+  const router = useRouter();
   const [data, setData] = useState<DepotData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'positionen' | 'allokation' | 'balancing'>('positionen');
+  const [activeTab, setActiveTab] = useState<'positionen' | 'allokation' | 'balancing' | 'verlauf'>('positionen');
+  const [chartData, setChartData] = useState<{ date: string; value: number }[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+
+  const goToMatrix = useCallback((ticker: string) => {
+    if (!ticker) return;
+    if (onAnalyze) { onAnalyze(ticker); return; }
+    router.push(`/matrix?ticker=${encodeURIComponent(ticker)}`);
+  }, [router, onAnalyze]);
+
+  const loadChart = useCallback(async () => {
+    if (chartData.length > 0) return;
+    setChartLoading(true);
+    try {
+      const res = await fetch('/api/depot-chart');
+      const json = await res.json();
+      setChartData(json.chartData ?? []);
+    } catch { /* ignore */ }
+    finally { setChartLoading(false); }
+  }, [chartData.length]);
 
   const fetchDepot = useCallback(async () => {
     setLoading(true);
@@ -89,6 +110,14 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
   const { positions, totalValue } = data;
   const totalGainLoss = positions.reduce((s, p) => s + p.gainLoss, 0);
   const totalGainLossPercent = data.totalReported > 0 ? (totalGainLoss / data.totalReported) * 100 : 0;
+
+  // Daily gain/loss: sum of (currentValue × changePercent / (100 + changePercent) × 100)
+  const totalDailyChange = positions.reduce((s, p) => {
+    if (p.liveChangePercent === null) return s;
+    const prevValue = p.currentValue / (1 + p.liveChangePercent / 100);
+    return s + (p.currentValue - prevValue);
+  }, 0);
+  const totalDailyChangePct = totalValue > 0 ? (totalDailyChange / (totalValue - totalDailyChange)) * 100 : 0;
 
   // Strategy allocation
   const strategyAllocation = Object.entries(STRATEGY_CONFIG).map(([key, config]) => {
@@ -206,8 +235,9 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
 
   const tabs = [
     { id: 'positionen' as const, label: 'Positionen', icon: Layers },
+    { id: 'verlauf' as const,    label: 'Verlauf',    icon: LineChartIcon, onActivate: loadChart },
     { id: 'allokation' as const, label: 'Allokation', icon: BarChart3 },
-    { id: 'balancing' as const, label: 'Balancing', icon: Shield },
+    { id: 'balancing' as const,  label: 'Balancing',  icon: Shield },
   ];
 
   return (
@@ -235,17 +265,26 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
             <p className="text-lg font-bold text-white">{formatEur(totalValue)}</p>
           </div>
           <div className="bg-[#0a0e1a] rounded-lg p-3">
-            <p className="text-xs text-gray-500 mb-1">Gewinn/Verlust</p>
+            <p className="text-xs text-gray-500 mb-1">Heute</p>
+            <div className="flex items-center gap-1">
+              {totalDailyChange >= 0 ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />}
+              <p className={`text-lg font-bold ${totalDailyChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {totalDailyChange >= 0 ? '+' : ''}{formatEur(totalDailyChange)}
+              </p>
+            </div>
+            <p className={`text-xs font-mono mt-0.5 ${totalDailyChangePct >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {totalDailyChangePct >= 0 ? '+' : ''}{formatPercent(totalDailyChangePct)}
+            </p>
+          </div>
+          <div className="bg-[#0a0e1a] rounded-lg p-3">
+            <p className="text-xs text-gray-500 mb-1">Gesamt G/V</p>
             <div className="flex items-center gap-1">
               {totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />}
               <p className={`text-lg font-bold ${totalGainLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {totalGainLoss >= 0 ? '+' : ''}{formatEur(totalGainLoss)}
               </p>
             </div>
-          </div>
-          <div className="bg-[#0a0e1a] rounded-lg p-3">
-            <p className="text-xs text-gray-500 mb-1">Performance</p>
-            <p className={`text-lg font-bold ${totalGainLossPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`text-xs font-mono mt-0.5 ${totalGainLossPercent >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               {totalGainLossPercent >= 0 ? '+' : ''}{formatPercent(totalGainLossPercent)}
             </p>
           </div>
@@ -263,7 +302,7 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); (tab as any).onActivate?.(); }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all ${
                 activeTab === tab.id
                   ? 'bg-[#f0b90b]/10 text-[#f0b90b] border border-[#f0b90b]/20'
@@ -289,9 +328,9 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
                   <th className="text-right px-3 py-3">Kurs</th>
                   <th className="text-right px-3 py-3">Wert</th>
                   <th className="text-right px-3 py-3">G/V</th>
+                  <th className="text-right px-3 py-3">Heute</th>
                   <th className="text-right px-3 py-3">Anteil</th>
                   <th className="text-center px-3 py-3">Typ</th>
-                  <th className="text-center px-2 py-3"></th>
                 </tr>
               </thead>
               <tbody>
@@ -299,16 +338,21 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
                   .sort((a, b) => b.currentValue - a.currentValue)
                   .map((pos, i) => {
                     const percent = totalValue > 0 ? (pos.currentValue / totalValue) * 100 : 0;
+                    const dailyEur = pos.liveChangePercent !== null
+                      ? pos.currentValue - pos.currentValue / (1 + pos.liveChangePercent / 100)
+                      : null;
+                    const isClickable = !!pos.ticker && pos.ticker !== pos.isin;
                     return (
-                      <tr key={pos.isin} className={`border-b border-[#1a1f37]/50 hover:bg-[#1a1f37]/30 transition-colors ${i % 2 === 0 ? 'bg-[#0a0e1a]/30' : ''}`}>
+                      <tr
+                        key={pos.isin}
+                        onClick={() => isClickable && goToMatrix(pos.ticker)}
+                        className={`border-b border-[#1a1f37]/50 transition-colors ${i % 2 === 0 ? 'bg-[#0a0e1a]/30' : ''} ${isClickable ? 'cursor-pointer hover:bg-[#f0b90b]/5 group' : ''}`}
+                      >
                         <td className="px-4 py-3">
-                          <div
-                            className={pos.ticker && onAnalyze ? 'cursor-pointer group/name' : ''}
-                            onClick={() => { if (pos.ticker && onAnalyze) onAnalyze(pos.ticker); }}
-                          >
-                            <p className={`text-white font-medium text-xs ${pos.ticker && onAnalyze ? 'group-hover/name:text-[#f0b90b] transition-colors' : ''}`}>{pos.shortName}</p>
-                            <p className="text-gray-500 text-[10px]">{pos.isin}</p>
-                          </div>
+                          <p className={`text-white font-medium text-xs ${isClickable ? 'group-hover:text-[#f0b90b] transition-colors' : ''}`}>
+                            {pos.shortName}
+                          </p>
+                          <p className="text-gray-500 text-[10px]">{pos.isin}</p>
                         </td>
                         <td className="text-right px-3 py-3 text-gray-300 text-xs font-mono">
                           {pos.stueck % 1 === 0 ? pos.stueck.toFixed(0) : pos.stueck.toFixed(2)}
@@ -333,12 +377,18 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
                           </p>
                         </td>
                         <td className="text-right px-3 py-3">
+                          {dailyEur !== null ? (
+                            <p className={`text-xs font-mono font-bold ${dailyEur >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                              {dailyEur >= 0 ? '+' : ''}{formatEur(dailyEur)}
+                            </p>
+                          ) : (
+                            <span className="text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="text-right px-3 py-3">
                           <div className="flex items-center justify-end gap-2">
                             <div className="w-16 bg-[#1a1f37] rounded-full h-1.5">
-                              <div
-                                className="h-1.5 rounded-full bg-[#f0b90b]"
-                                style={{ width: `${Math.min(percent, 100)}%` }}
-                              />
+                              <div className="h-1.5 rounded-full bg-[#f0b90b]" style={{ width: `${Math.min(percent, 100)}%` }} />
                             </div>
                             <span className="text-gray-400 text-[10px] font-mono w-10 text-right">{formatPercent(percent)}</span>
                           </div>
@@ -346,23 +396,12 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
                         <td className="text-center px-3 py-3">
                           <span className={`text-[10px] px-2 py-0.5 rounded-full ${
                             pos.category === 'aktie' ? 'bg-[#60B5FF]/10 text-[#60B5FF]' :
-                            pos.category === 'etf' ? 'bg-[#f0b90b]/10 text-[#f0b90b]' :
-                            pos.category === 'etp' ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
+                            pos.category === 'etf'   ? 'bg-[#f0b90b]/10 text-[#f0b90b]' :
+                            pos.category === 'etp'   ? 'bg-[#f59e0b]/10 text-[#f59e0b]' :
                             'bg-[#8b5cf6]/10 text-[#8b5cf6]'
                           }`}>
                             {CATEGORY_LABELS[pos.category]}
                           </span>
-                        </td>
-                        <td className="text-center px-2 py-3">
-                          {pos.ticker && onAnalyze && (
-                            <button
-                              onClick={() => onAnalyze(pos.ticker)}
-                              className="text-gray-500 hover:text-[#f0b90b] transition-colors p-1"
-                              title="Matrix-Analyse starten"
-                            >
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
-                          )}
                         </td>
                       </tr>
                     );
@@ -377,8 +416,13 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
                       {totalGainLoss >= 0 ? '+' : ''}{formatEur(totalGainLoss)}
                     </span>
                   </td>
+                  <td className="text-right px-3 py-3">
+                    <span className={`font-bold text-sm font-mono ${totalDailyChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {totalDailyChange >= 0 ? '+' : ''}{formatEur(totalDailyChange)}
+                    </span>
+                  </td>
                   <td className="text-right px-3 py-3 text-gray-400 text-xs">100%</td>
-                  <td colSpan={2}></td>
+                  <td></td>
                 </tr>
               </tfoot>
             </table>
@@ -387,6 +431,66 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
             <p className="text-[10px] text-gray-600">Kurse: Yahoo Finance (Live) • Keine offizielle Trade Republic API verfügbar</p>
             <p className="text-[10px] text-gray-600">Aktualisiert: {new Date(data.lastUpdate).toLocaleString('de-DE')}</p>
           </div>
+        </div>
+      )}
+
+      {/* Tab: Verlauf */}
+      {activeTab === 'verlauf' && (
+        <div className="glass-card rounded-xl p-5">
+          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <LineChartIcon className="w-4 h-4 text-[#f0b90b]" />
+            Depot-Entwicklung (6 Monate)
+          </h3>
+          {chartLoading ? (
+            <div className="h-72 flex items-center justify-center text-gray-400">
+              <RefreshCw className="w-6 h-6 animate-spin mr-2" /> Lade Kursdaten…
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="h-72 flex items-center justify-center text-gray-500 text-sm">Keine Verlaufsdaten verfügbar</div>
+          ) : (
+            <>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="depotGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f0b90b" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#f0b90b" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1f37" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: '#6b7280' }}
+                      tickFormatter={(d) => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
+                      interval={Math.floor(chartData.length / 6)}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: '#6b7280' }}
+                      tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
+                      width={45}
+                    />
+                    <Tooltip
+                      contentStyle={{ background: '#1a1f37', border: '1px solid #2a2f47', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                      formatter={(v: number) => [formatEur(v), 'Depotwert']}
+                      labelFormatter={(d) => new Date(d).toLocaleDateString('de-DE')}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#f0b90b"
+                      strokeWidth={2}
+                      fill="url(#depotGrad)"
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-[10px] text-gray-600 mt-3">
+                Historische Kurse via Yahoo Finance · Näherungswerte basierend auf aktuellem EUR-Kurs
+              </p>
+            </>
+          )}
         </div>
       )}
 
