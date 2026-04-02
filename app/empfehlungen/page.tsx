@@ -49,19 +49,19 @@ export default function EmpfehlungenPage() {
                   </div>
                   <div className="bg-[#1a1f37] rounded-lg p-2 text-center">
                     <div className="text-gray-400">Technisch</div>
-                    <div className="text-white font-bold">{e.technicalScore}</div>
+                    <div className="text-white font-bold">{e.technischerScore}</div>
                   </div>
                   <div className="bg-[#1a1f37] rounded-lg p-2 text-center">
                     <div className="text-gray-400">Makro</div>
-                    <div className="text-white font-bold">{e.macroScore}</div>
+                    <div className="text-white font-bold">{e.makroScore}</div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5 text-xs text-gray-400">
-                  {e.kaufzone && (
+                  {e.nachkaufZone && (
                     <div className="flex justify-between">
                       <span className="flex items-center gap-1"><Target className="w-3 h-3 text-green-400" /> Kaufzone</span>
-                      <span className="text-green-400 font-medium">{e.kaufzone}</span>
+                      <span className="text-green-400 font-medium">{e.nachkaufZone}</span>
                     </div>
                   )}
                   {e.stopLoss && (
@@ -70,10 +70,10 @@ export default function EmpfehlungenPage() {
                       <span className="text-red-400 font-medium">{e.stopLoss}</span>
                     </div>
                   )}
-                  {e.kursziel && (
+                  {e.zielKurs && (
                     <div className="flex justify-between">
                       <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3 text-[#f0b90b]" /> Kursziel</span>
-                      <span className="text-[#f0b90b] font-medium">{e.kursziel}</span>
+                      <span className="text-[#f0b90b] font-medium">{e.zielKurs}</span>
                     </div>
                   )}
                 </div>

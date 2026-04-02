@@ -1,6 +1,5 @@
 /**
  * Yahoo Finance cookie + crumb authentication.
- * Kept intentionally simple – close to the original working implementation.
  */
 
 const UA =
@@ -11,44 +10,82 @@ let cachedCookie  = '';
 let cachedCrumb   = '';
 let cookieExpiry  = 0;
 
+/** Extract all Set-Cookie values from a response and join them for the Cookie header */
+function extractCookies(res: Response): string {
+  // Node 18.14+ supports getSetCookie() returning string[]
+  if (typeof (res.headers as any).getSetCookie === 'function') {
+    const cookies: string[] = (res.headers as any).getSetCookie();
+    return cookies.map((c: string) => c.split(';')[0]).join('; ');
+  }
+  // Fallback: undici concatenates Set-Cookie headers with ", "
+  // Split carefully: cookie entries start after ", " followed by a word char
+  const raw = res.headers.get('set-cookie') || '';
+  if (!raw) return '';
+  return raw.split(/,\s*(?=[A-Za-z0-9_-]+=)/).map(c => c.split(';')[0]).join('; ');
+}
+
+export function clearYahooCache() {
+  cachedCookie = '';
+  cachedCrumb  = '';
+  cookieExpiry = 0;
+}
+
 export async function getYahooAuth(): Promise<{ cookie: string; crumb: string }> {
   if (cachedCookie && cachedCrumb && Date.now() < cookieExpiry) {
     return { cookie: cachedCookie, crumb: cachedCrumb };
   }
 
-  // Step 1: Get cookie from Yahoo Finance homepage
-  const homeRes = await fetch('https://finance.yahoo.com/', {
-    headers: {
-      'User-Agent': UA,
-      'Accept': 'text/html',
-      'Accept-Language': 'en-US,en;q=0.9',
-    },
-  });
-  const setCookie = homeRes.headers.get('set-cookie') || '';
-  const cookie = setCookie.split(';')[0] || '';
+  // Step 1: Get cookies from Yahoo Finance homepage
+  let cookie = '';
+  try {
+    const homeRes = await fetch('https://finance.yahoo.com/', {
+      headers: {
+        'User-Agent': UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000),
+    });
+    cookie = extractCookies(homeRes);
+  } catch { /* ignore, try crumb without cookie */ }
 
-  // Step 2: Get crumb
-  const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-    headers: {
-      'User-Agent': UA,
-      'Cookie': cookie,
-    },
-  });
-  const crumb = (await crumbRes.text()).trim();
+  // Step 2: Get crumb — try query1 then query2, with and without cookie
+  let crumb = '';
+  const crumbHosts = ['query1', 'query2'];
+  for (const host of crumbHosts) {
+    try {
+      const headers: Record<string, string> = { 'User-Agent': UA };
+      if (cookie) headers['Cookie'] = cookie;
+      const r = await fetch(`https://${host}.finance.yahoo.com/v1/test/getcrumb`, {
+        headers,
+        signal: AbortSignal.timeout(5000),
+      });
+      const text = (await r.text()).trim();
+      // Valid crumb: non-empty, not HTML, not "Unauthorized"
+      if (text && !text.startsWith('<') && text !== 'Unauthorized' && text.length < 50) {
+        crumb = text;
+        break;
+      }
+    } catch { /* try next */ }
+  }
 
-  cachedCookie = cookie;
-  cachedCrumb  = crumb;
-  cookieExpiry = Date.now() + 25 * 60 * 1000;
+  if (crumb) {
+    cachedCookie = cookie;
+    cachedCrumb  = crumb;
+    cookieExpiry = Date.now() + 20 * 60 * 1000;
+  }
 
   return { cookie, crumb };
 }
 
 export function yahooHeaders(cookie: string): HeadersInit {
-  return {
+  const headers: Record<string, string> = {
     'User-Agent': UA,
     'Accept': 'application/json',
-    'Cookie': cookie,
   };
+  if (cookie) headers['Cookie'] = cookie;
+  return headers;
 }
 
 export async function fetchChartPrice(
@@ -59,7 +96,10 @@ export async function fetchChartPrice(
   const crumbParam = crumb ? `&crumb=${encodeURIComponent(crumb)}` : '';
   const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=2d${crumbParam}`;
   try {
-    const res = await fetch(url, { headers: yahooHeaders(cookie) });
+    const res = await fetch(url, {
+      headers: yahooHeaders(cookie),
+      signal: AbortSignal.timeout(6000),
+    });
     if (!res.ok) return null;
     const data = await res.json();
     const meta = data?.chart?.result?.[0]?.meta;

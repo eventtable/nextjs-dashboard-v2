@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateRSI } from '@/lib/stock-utils';
 import type { StockData } from '@/lib/types';
-import { getYahooAuth, yahooHeaders } from '@/lib/yahoo-auth';
+import { getYahooAuth, yahooHeaders, clearYahooCache } from '@/lib/yahoo-auth';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -26,7 +26,15 @@ export async function GET(req: NextRequest) {
 
     // Fetch quote summary
     const summaryUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
-    const summaryRes = await fetch(summaryUrl, { headers: yahooHeaders(cookie) });
+    let summaryRes = await fetch(summaryUrl, { headers: yahooHeaders(cookie) });
+
+    // On 401/403: clear cached auth and retry once with fresh credentials
+    if (summaryRes.status === 401 || summaryRes.status === 403) {
+      clearYahooCache();
+      const fresh = await getYahooAuth();
+      const retryUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}&crumb=${encodeURIComponent(fresh.crumb)}`;
+      summaryRes = await fetch(retryUrl, { headers: yahooHeaders(fresh.cookie) });
+    }
 
     if (!summaryRes.ok) {
       const errText = await summaryRes.text();

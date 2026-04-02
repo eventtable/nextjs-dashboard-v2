@@ -13,16 +13,19 @@ export default function AdminInvitesPage() {
   const [showForm, setShowForm] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newLink, setNewLink]   = useState<string | null>(null);
+  const [error, setError]       = useState<string | null>(null);
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   async function load() {
     setLoading(true);
+    setError(null);
     try {
       const r = await fetch('/api/admin/invites');
       const d = await r.json();
-      setInvites(d.invites ?? []);
-    } catch { /* ignore */ }
+      if (!r.ok) { setError(d.error ?? `Fehler ${r.status}`); setInvites([]); }
+      else setInvites(d.invites ?? []);
+    } catch (e: any) { setError(e.message ?? 'Netzwerkfehler'); }
     finally { setLoading(false); }
   }
 
@@ -31,6 +34,7 @@ export default function AdminInvitesPage() {
   async function createInvite() {
     setCreating(true);
     setNewLink(null);
+    setError(null);
     try {
       const r = await fetch('/api/admin/invites', {
         method: 'POST',
@@ -38,13 +42,14 @@ export default function AdminInvitesPage() {
         body: JSON.stringify({ maxUses }),
       });
       const d = await r.json();
-      if (d.invite?.code) {
+      if (!r.ok) { setError(d.error ?? `Fehler ${r.status}`); }
+      else if (d.invite?.code) {
         const link = `${baseUrl}/register?invite=${d.invite.code}`;
         setNewLink(link);
         setShowForm(false);
         await load();
       }
-    } catch { /* ignore */ }
+    } catch (e: any) { setError(e.message ?? 'Netzwerkfehler'); }
     finally { setCreating(false); }
   }
 
@@ -82,6 +87,13 @@ export default function AdminInvitesPage() {
             <Plus className="w-4 h-4" /> Neuen Link erstellen
           </button>
         </div>
+
+        {/* Error banner */}
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+            ⚠️ {error}
+          </div>
+        )}
 
         {/* Create form */}
         {showForm && (
