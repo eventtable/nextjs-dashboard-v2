@@ -29,9 +29,13 @@ export async function GET(_req: NextRequest) {
 
           const timestamps: number[] = result.timestamp || [];
           const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
-          const latestClose = closes.filter(Boolean).slice(-1)[0] ?? pos.kursProStueck;
+          const rawLatestClose = closes.filter(Boolean).slice(-1)[0] ?? pos.kursProStueck;
+          // Apply same sanity check as depot-prices: reject if >4× stored price (Yahoo wrong-price bug)
+          const latestClose = (pos.kursProStueck && rawLatestClose > pos.kursProStueck * 4)
+            ? pos.kursProStueck
+            : rawLatestClose;
 
-          // EUR factor: normalize live price to EUR using fallback kursProStueck
+          // EUR factor: normalize historical prices to EUR using stored reference price
           const eurFactor = pos.kursProStueck / latestClose;
 
           return {

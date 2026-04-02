@@ -31,9 +31,10 @@ export async function GET(req: NextRequest) {
         const data = await res.json();
         const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
         if (price) {
-          // Sanity check: reject live price if it's more than 5× or less than 0.2× the fallback
+          // Sanity check: reject live price if it's more than 4× or less than 0.25× the fallback
+          // (PAEEM.PA: Yahoo returns ~29€ instead of ~6€, 4× threshold rejects this)
           const fallback = depotPositionen.find(p => p.ticker === ticker)?.kursProStueck;
-          const plausible = !fallback || (price >= fallback * 0.2 && price <= fallback * 5);
+          const plausible = !fallback || (price >= fallback * 0.25 && price <= fallback * 4);
           if (plausible) prices[ticker] = Math.round(price * 100) / 100;
         }
       } catch {

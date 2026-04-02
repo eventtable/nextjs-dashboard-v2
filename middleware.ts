@@ -29,12 +29,7 @@ export default withAuth(
       }
     }
 
-    // Depot: Admin-only — Freunde und normale Nutzer sehen kein Depot
-    if (pathname.startsWith("/depot") || pathname.startsWith("/api/depot")) {
-      if (!token?.isAdmin) {
-        return NextResponse.redirect(new URL("/", req.url));
-      }
-    }
+    // Depot: Alle eingeloggten User dürfen — aber jeder sieht nur seine eigenen Daten
 
     return NextResponse.next();
   },
