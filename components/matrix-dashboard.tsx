@@ -26,6 +26,7 @@ interface SearchResult {
 
 export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?: string }) {
   const [ticker, setTicker] = useState(initialTicker);
+  const [confirmedTicker, setConfirmedTicker] = useState(initialTicker); // actual exchange symbol
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,19 +66,27 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
 
   const handleInputChange = (value: string) => {
     setTicker(value);
+    setConfirmedTicker(''); // reset confirmed ticker when user types
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => searchStocks(value), 200);
   };
 
   const selectResult = (result: SearchResult) => {
     setTicker(result.ticker);
+    setConfirmedTicker(result.ticker);
     setShowDropdown(false);
     setSearchResults([]);
     fetchStock(result.ticker);
   };
 
   const fetchStock = useCallback(async (tickerInput?: string) => {
-    const t = (tickerInput ?? ticker)?.trim?.() ?? '';
+    // Priority: explicit arg > confirmed (dropdown) ticker > first search result > raw input uppercased
+    const t = (
+      tickerInput?.trim() ||
+      confirmedTicker?.trim() ||
+      searchResults[0]?.ticker?.trim() ||
+      ticker?.trim()?.toUpperCase()
+    ) ?? '';
     if (!t) return;
     setLoading(true);
     setError(null);
@@ -99,7 +108,7 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
     } finally {
       setLoading(false);
     }
-  }, [ticker, chartRange]);
+  }, [ticker, confirmedTicker, searchResults, chartRange]);
 
   const handleRangeChange = useCallback(async (newRange: '1y' | '5y') => {
     setChartRange(newRange);
@@ -118,7 +127,16 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       setShowDropdown(false);
-      fetchStock();
+      // If search results available, use first result as confirmed ticker
+      if (searchResults.length > 0 && !confirmedTicker) {
+        const first = searchResults[0];
+        setConfirmedTicker(first.ticker);
+        setTicker(first.ticker);
+        setSearchResults([]);
+        fetchStock(first.ticker);
+      } else {
+        fetchStock();
+      }
     }
     if (e.key === 'Escape') setShowDropdown(false);
   };

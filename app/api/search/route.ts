@@ -34,13 +34,20 @@ export async function GET(req: NextRequest) {
     const quotes = data?.quotes || [];
 
     const results = quotes
-      .filter((q: any) => q.symbol && (q.shortname || q.longname))
+      .filter((q: any) =>
+        q.symbol &&
+        typeof q.symbol === 'string' &&
+        q.symbol.trim().length > 0 &&
+        (q.shortname || q.longname) &&
+        ['EQUITY', 'ETF', 'INDEX', 'MUTUALFUND'].includes(q.quoteType ?? 'EQUITY')
+      )
       .map((q: any) => ({
-        ticker: q.symbol,                          // was "symbol" — component expects "ticker"
+        ticker: q.symbol.trim(),
         name: q.longname || q.shortname || q.symbol,
-        sector: q.industry || q.typeDisp || '',
+        sector: q.industry || q.typeDisp || q.quoteType || '',
         index: q.exchDisp || q.exchange || '',
-      }));
+      }))
+      .filter((r: any) => r.ticker.length > 0);
 
     return NextResponse.json({ results });
   } catch (error) {
