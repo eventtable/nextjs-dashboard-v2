@@ -23,7 +23,12 @@ export async function GET(req: NextRequest) {
         if (!res.ok) return;
         const data = await res.json();
         const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
-        if (price) prices[ticker] = Math.round(price * 100) / 100;
+        if (price) {
+          // Sanity check: reject live price if it's more than 5× or less than 0.2× the fallback
+          const fallback = depotPositionen.find(p => p.ticker === ticker)?.kursProStueck;
+          const plausible = !fallback || (price >= fallback * 0.2 && price <= fallback * 5);
+          if (plausible) prices[ticker] = Math.round(price * 100) / 100;
+        }
       } catch {
         // Use static fallback
         const pos = depotPositionen.find(p => p.ticker === ticker);
