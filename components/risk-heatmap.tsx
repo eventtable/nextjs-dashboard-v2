@@ -22,7 +22,7 @@ interface PositionRisk {
 }
 
 // Risiko-Scoring für einzelne Positionen
-const calculatePositionRisk = (position: Position): PositionRisk => {
+const calculatePositionRisk = (position: Position, totalValue: number = 8659): PositionRisk => {
   const affectedScenarios = riskScenarios.filter(s => 
     s.affectedTickers.includes(position.ticker) || 
     (position.sektor && s.affectedSectors.includes(position.sektor))
@@ -70,7 +70,7 @@ const calculatePositionRisk = (position: Position): PositionRisk => {
   riskScore += (volatility / 30) * 25;
   
   // Gewicht im Depot (10%)
-  const weight = position.wertEur / 8659; // ~Total
+  const weight = position.wertEur / (totalValue || 8659);
   riskScore += weight * 100 * 0.1;
   
   riskScore = Math.min(100, Math.max(0, riskScore));
@@ -104,7 +104,7 @@ export default function RiskHeatmap({ positions, totalValue }: RiskHeatmapProps)
   const [selectedPosition, setSelectedPosition] = useState<PositionRisk | null>(null);
   const [hoveredPosition, setHoveredPosition] = useState<string | null>(null);
   
-  const positionRisks = positions.map(calculatePositionRisk).sort((a, b) => b.riskScore - a.riskScore);
+  const positionRisks = positions.map(p => calculatePositionRisk(p, totalValue)).sort((a, b) => b.riskScore - a.riskScore);
   
   const highRiskCount = positionRisks.filter(p => p.riskLevel === 'high' || p.riskLevel === 'severe').length;
   const avgRiskScore = positionRisks.reduce((sum, p) => sum + p.riskScore, 0) / positionRisks.length;

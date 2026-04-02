@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { depotPositionen } from '@/data/depot';
 import { getYahooAuth, fetchChartPrice } from '@/lib/yahoo-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+  }
   try {
     const { cookie, crumb } = await getYahooAuth().catch(() => ({ cookie: '', crumb: '' }));
 

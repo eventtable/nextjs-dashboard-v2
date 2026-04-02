@@ -37,10 +37,8 @@ export const authOptions: NextAuthOptions = {
 
         // DB auth via Prisma
         try {
-          const { PrismaClient } = await import('@prisma/client');
-          const prisma = new PrismaClient();
+          const { prisma } = await import('@/lib/prisma');
           const user = await prisma.user.findUnique({ where: { email: credentials.email } });
-          await prisma.$disconnect();
 
           if (!user || !user.isActive) return null;
 

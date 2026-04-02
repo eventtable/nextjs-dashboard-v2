@@ -3,6 +3,8 @@ import { calculateRSI } from '@/lib/stock-utils';
 import type { StockData } from '@/lib/types';
 import { getYahooAuth, yahooHeaders, clearYahooCache } from '@/lib/yahoo-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const ticker = searchParams.get('ticker') || searchParams.get('symbol') || '';

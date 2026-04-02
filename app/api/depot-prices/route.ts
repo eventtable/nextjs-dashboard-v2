@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { depotPositionen } from '@/data/depot';
 
+export const dynamic = 'force-dynamic';
+
 // Lightweight price-only endpoint (used for ticker updates)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

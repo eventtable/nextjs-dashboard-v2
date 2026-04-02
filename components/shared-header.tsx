@@ -17,6 +17,7 @@ import {
   LogOut,
   User
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { usePortfolio } from '@/hooks/use-portfolio';
 
 interface SharedHeaderProps {
@@ -31,7 +32,7 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: Zap },
   { href: '/depot', label: 'Depot', icon: Wallet },
   { href: '/matrix', label: 'Matrix', icon: LayoutGrid },
-  { href: '/charts', label: 'Charts', icon: TrendingUp },
+  { href: '/empfehlungen', label: 'Tipps', icon: TrendingUp },
   { href: '/smartmoney', label: 'Profis', icon: Grid3X3 },
   { href: '/risiko', label: 'Risiko', icon: BellRing },
 ];
@@ -47,6 +48,7 @@ export default function SharedHeader({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession();
   const { totalValue, isLoading } = usePortfolio();
 
   // Click outside to close user menu
@@ -134,7 +136,7 @@ export default function SharedHeader({
                 <div className="absolute right-0 top-10 w-48 bg-[#0d1220] border border-[#1a1f37] rounded-lg shadow-xl py-2 z-50">
                   <div className="px-4 py-2 border-b border-[#1a1f37]">
                     <p className="text-xs text-gray-500">Angemeldet als</p>
-                    <p className="text-sm font-semibold text-white truncate">Frank Müller</p>
+                    <p className="text-sm font-semibold text-white truncate">{session?.user?.name || session?.user?.email || 'User'}</p>
                   </div>
                   
                   <Link

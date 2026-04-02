@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart3, TrendingUp, Users, Shield, CheckSquare, Activity, Zap, DollarSign, Wallet, Menu, X, LogOut, ShieldAlert, User } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Shield, CheckSquare, Activity, Zap, DollarSign, Wallet, Menu, X, LogOut, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
+import { signOut } from 'next-auth/react';
 
 interface SidebarProps {
   activeSection: string;
@@ -24,13 +25,8 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
 
   const closeMobileMenu = () => setIsMobileOpen(false);
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/login' });
   };
 
   return (
@@ -136,16 +132,8 @@ export default function Sidebar({ activeSection, onSectionChange }: SidebarProps
             </div>
           </div>
           
-          {/* Profile and Logout Buttons */}
+          {/* Logout Button */}
           <div className="mt-3 space-y-2">
-            <Link
-              href="/profile"
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-[#1a1f37] border border-transparent hover:border-gray-600 transition-all"
-            >
-              <User className="w-3.5 h-3.5" />
-              Mein Profil
-            </Link>
-            
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all"
