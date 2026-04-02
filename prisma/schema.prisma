@@ -37,7 +37,14 @@ model Depot {
   updatedAt DateTime @updatedAt
 }
 
-model Session {
+model SmartMoneyCache {
+  id        String   @id @default(cuid())
+  ticker    String   @unique
+  data      String   // JSON: { institutionalHolders, majorHolders, insiderTransactions, source }
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
   id           String   @id @default(cuid())
   userId       String
   email        String

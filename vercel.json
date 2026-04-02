@@ -5,5 +5,11 @@
   "regions": ["fra1"],
   "env": {
     "NEXT_PUBLIC_APP_URL": "https://nextjsdashboardv2-henna.vercel.app"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/smart-money",
+      "schedule": "0 6 * * 1"
+    }
+  ]
 }
