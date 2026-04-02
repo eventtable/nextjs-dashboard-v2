@@ -286,10 +286,10 @@ export default function BacktestPage() {
         </div>
 
         {/* Config */}
-        <div className="glass-card rounded-xl p-6 border border-[#1a1f37]">
+        <div className="glass-card rounded-xl p-4 sm:p-6 border border-[#1a1f37]">
           <h3 className="font-semibold text-white mb-1">Konfiguration</h3>
           <p className="text-xs text-gray-500 mb-4">Alle 4 Strategien werden gleichzeitig verglichen</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
 
             {/* Asset Search */}
             <div>
@@ -398,12 +398,12 @@ export default function BacktestPage() {
           <>
             {/* Strategy comparison table */}
             <div className="glass-card rounded-xl border border-[#1a1f37] overflow-hidden">
-              <div className="px-5 py-3 border-b border-[#1a1f37] flex items-center justify-between">
-                <h3 className="font-semibold text-white text-sm">Strategievergleich – {activeTicker} · {years} Jahr{years > 1 ? 'e' : ''}</h3>
+              <div className="px-4 py-3 border-b border-[#1a1f37] flex flex-wrap items-center gap-2 justify-between">
+                <h3 className="font-semibold text-white text-sm">{activeTicker} · {years} Jahr{years > 1 ? 'e' : ''}</h3>
                 {showReal && (realLoading || realReturn !== null) && (
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="w-3 h-0.5 bg-emerald-400 inline-block" style={{borderTop:'2px dashed #22c55e', background:'none'}} />
-                    <span className="text-gray-400">Echtes Buy &amp; Hold:</span>
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className="text-gray-400 hidden sm:inline">Echtes Buy &amp; Hold:</span>
+                    <span className="text-gray-400 sm:hidden">Echt:</span>
                     {realLoading
                       ? <span className="text-gray-500">Lade…</span>
                       : <span className={`font-bold ${realReturn! > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -471,9 +471,9 @@ export default function BacktestPage() {
             <div className="glass-card rounded-xl p-6 border border-[#1a1f37]">
               <h3 className="font-semibold text-white mb-1">Portfolio-Entwicklung – alle Strategien</h3>
               <p className="text-xs text-gray-500 mb-4">{activeTicker} · {years} Jahr{years > 1 ? 'e' : ''} · Startkapital €{capital.toLocaleString('de-DE')}</p>
-              <div className="h-80">
+              <div className="h-56 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 4, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1a1f37" />
                     <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 11 }} tickCount={6} />
                     <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />

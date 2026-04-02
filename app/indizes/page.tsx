@@ -115,22 +115,24 @@ function IndexCard({ idx, showFib }: { idx: IndexData; showFib: boolean }) {
     : 0.5;
 
   return (
-    <div className="glass-card rounded-xl p-4 border border-[#1a1f37] flex flex-col gap-2 hover:border-[#2a2f47] transition-colors">
+    <div className="glass-card rounded-xl p-3 sm:p-4 border border-[#1a1f37] flex flex-col gap-2 hover:border-[#2a2f47] transition-colors">
       {/* Header row */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-start justify-between gap-1.5">
         <div className="min-w-0">
-          <p className="font-bold text-white text-base leading-tight truncate">{idx.name}</p>
-          <p className="text-[10px] text-gray-500">{idx.region} · {idx.symbol}</p>
+          <p className="font-bold text-white text-sm sm:text-base leading-tight truncate">{idx.name}</p>
+          <p className="text-[10px] text-gray-500 truncate">{idx.region} · {idx.symbol}</p>
         </div>
         <TrendBadge trend={idx.trend} label={idx.trendLabel} />
       </div>
 
       {/* Price + changes */}
-      <div className="flex items-center justify-between">
-        <p className="text-2xl font-bold text-white tabular-nums leading-none">{priceStr}
-          <span className="text-[10px] text-gray-500 font-normal ml-1">{idx.currency || 'Pkt'}</span>
-        </p>
-        <div className="text-right space-y-0.5">
+      <div className="flex items-center justify-between gap-1">
+        <div className="min-w-0">
+          <p className="text-lg sm:text-2xl font-bold text-white tabular-nums leading-none truncate">{priceStr}
+            <span className="text-[10px] text-gray-500 font-normal ml-1">{idx.currency || 'Pkt'}</span>
+          </p>
+        </div>
+        <div className="text-right space-y-0.5 flex-shrink-0">
           <div className="flex items-center justify-end gap-1"><span className="text-[10px] text-gray-600">Heute</span><Chg value={idx.changeDay} /></div>
           <div className="flex items-center justify-end gap-1"><span className="text-[10px] text-gray-600">1M</span><Chg value={idx.change1M} /></div>
           <div className="flex items-center justify-end gap-1"><span className="text-[10px] text-gray-600">YTD</span><Chg value={idx.changeYTD} /></div>
@@ -232,10 +234,10 @@ export default function IndizesPage() {
             </h1>
             <p className="text-gray-400 text-sm mt-0.5">Weltweite Indizes, Rohstoffe &amp; Währungen · Jahreschart mit Fibonacci</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setShowFib(v => !v)}
               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${showFib ? 'border-[#f0b90b]/50 text-[#f0b90b] bg-[#f0b90b]/10' : 'border-[#2a2f47] text-gray-500'}`}>
-              〜 Fibonacci {showFib ? 'an' : 'aus'}
+              〜 Fib {showFib ? 'an' : 'aus'}
             </button>
             {updatedAt && (
               <span className="flex items-center gap-1 text-xs text-gray-500">
@@ -246,7 +248,7 @@ export default function IndizesPage() {
             <button onClick={() => load(true)} disabled={refreshing}
               className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#1a1f37] border border-[#2a2f47] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              Aktualisieren
+              <span className="hidden sm:inline">Aktualisieren</span>
             </button>
           </div>
         </div>
