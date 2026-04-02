@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch chart data for RSI + historical prices
     const chartInterval = range === '5y' ? '1wk' : '1d';
-    const chartUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${chartInterval}&range=${range}`;
+    const chartUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${chartInterval}&range=${range}`;
     let chartData: { date: string; close: number; volume?: number }[] = [];
     let rsi = 50;
     let currentPrice = fd.currentPrice?.raw ?? sd.regularMarketPrice?.raw ?? 0;
