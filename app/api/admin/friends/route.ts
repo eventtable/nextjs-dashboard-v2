@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     });
     await prisma.$disconnect();
     // Map to the shape the frontend expects
-    const friends = users.map(u => ({
+    const friends = users.map((u: typeof users[number]) => ({
       ...u,
       permissions: { canViewDepot: true, canViewML: false },
     }));
