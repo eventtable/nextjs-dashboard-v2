@@ -2,73 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { depotPositionen } from '@/data/depot';
+
+// Static baseline from depot.ts — matches what's shown on the Depot page
+const DEPOT_TOTAL = depotPositionen.reduce((s, p) => s + p.wertEur, 0);
 
 interface PortfolioData {
   totalValue: number;
-  totalChange: number;
-  totalChangePercent: number;
   isLoading: boolean;
-  error: string | null;
 }
 
 export function usePortfolio(): PortfolioData {
   const { data: session, status } = useSession();
-  const isAdmin = (session?.user as any)?.isAdmin === true;
-
-  const [data, setData] = useState<PortfolioData>({
-    totalValue: 0,
-    totalChange: 0,
-    totalChangePercent: 0,
-    isLoading: true,
-    error: null,
-  });
+  const [totalValue, setTotalValue] = useState(0);
 
   useEffect(() => {
-    // Still loading session — wait
     if (status === 'loading') return;
 
-    // Non-admin users always see 0
+    const isAdmin = (session?.user as any)?.isAdmin === true;
+
     if (!isAdmin) {
-      setData({ totalValue: 0, totalChange: 0, totalChangePercent: 0, isLoading: false, error: null });
+      setTotalValue(0);
       return;
     }
 
-    const fetchPortfolio = async () => {
-      try {
-        // Try to get from localStorage first (sync with depot page)
-        const stored = localStorage.getItem('meinDepot');
-        if (stored) {
-          const positions = JSON.parse(stored);
-          const total = positions.reduce((sum: number, pos: any) => sum + (pos.wertEur || 0), 0);
-          setData({ totalValue: total, totalChange: 0, totalChangePercent: 0, isLoading: false, error: null });
-          return;
-        }
-
-        // Fallback: fetch from depot-prices API
-        const response = await fetch('/api/depot-prices');
-        if (!response.ok) throw new Error('Failed to fetch');
-        const result = await response.json();
-        const prices = result.prices || {};
-        let totalVal = 0;
-        Object.values(prices).forEach((p: any) => {
-          if (p?.valueEur) totalVal += p.valueEur;
-        });
-        setData({ totalValue: totalVal || 0, totalChange: 0, totalChangePercent: 0, isLoading: false, error: null });
-      } catch (err) {
-        setData(prev => ({ ...prev, isLoading: false, error: err instanceof Error ? err.message : 'Unknown error' }));
+    // Admin: use live localStorage value if available, else static depot total
+    try {
+      const stored = localStorage.getItem('meinDepot');
+      if (stored) {
+        const positions = JSON.parse(stored);
+        const total = positions.reduce((s: number, p: any) => s + (p.wertEur || 0), 0);
+        if (total > 0) { setTotalValue(total); return; }
       }
-    };
+    } catch { /* ignore */ }
 
-    fetchPortfolio();
+    setTotalValue(DEPOT_TOTAL);
+  }, [status, session]);
 
-    const handleStorageChange = () => fetchPortfolio();
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('depotUpdated', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('depotUpdated', handleStorageChange);
-    };
-  }, [status, isAdmin]);
-
-  return data;
+  return { totalValue, isLoading: status === 'loading' };
 }

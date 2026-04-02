@@ -600,6 +600,11 @@ export function getFundamentalData(ticker: string): FundamentalData {
   return FUNDAMENTAL_DATABASE[upperTicker] || FALLBACK_DATA;
 }
 
+// Check if real data exists for this ticker (not just fallback)
+export function hasFundamentalData(ticker: string): boolean {
+  return ticker.toUpperCase() in FUNDAMENTAL_DATABASE;
+}
+
 // Hilfsfunktion um eine einzelne Kennzahl zu bewerten
 export function getKennzahlBewertung(
   key: string,

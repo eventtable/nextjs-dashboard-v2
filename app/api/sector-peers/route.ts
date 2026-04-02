@@ -35,18 +35,76 @@ const HEDGING_MAP: Record<string, Array<{ ticker: string; name: string; sector: 
     { ticker: 'AAPL', name: 'Apple', sector: 'Big Tech', reason: 'Tech-Wachstum gegensätzlich zu Gold' },
     { ticker: 'JPM', name: 'JPMorgan Chase', sector: 'Financials', reason: 'Zinsen schaden Gold, helfen Banken' },
   ],
+  'Pharma (Diabetes/Obesity)': [
+    { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Zyklisch vs. defensiv' },
+    { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech-Wachstum vs. defensives Healthcare' },
+    { ticker: 'JPM', name: 'JPMorgan Chase', sector: 'Financials', reason: 'Zinssensitiv vs. pharma-defensiv' },
+  ],
+  // Yahoo Finance sector names (fallback when ticker not in PEERS)
   'Technology': [
     { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Energie läuft gegensätzlich zu Tech' },
     { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Safe-Haven bei Tech-Korrektur' },
     { ticker: 'KO', name: 'Coca-Cola', sector: 'Consumer Staples', reason: 'Defensiv, niedrige Korrelation' },
     { ticker: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare', reason: 'Healthcare läuft in Rezessionen gut' },
   ],
-  'Pharma (Diabetes/Obesity)': [
-    { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Zyklisch vs. defensiv' },
+  'Healthcare': [
     { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech-Wachstum vs. defensives Healthcare' },
-    { ticker: 'JPM', name: 'JPMorgan Chase', sector: 'Financials', reason: 'Zinssensitiv vs. pharma-defensiv' },
+    { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Energie vs. defensives Healthcare' },
+    { ticker: 'JPM', name: 'JPMorgan Chase', sector: 'Financials', reason: 'Zinssensitiv vs. Healthcare-defensiv' },
+  ],
+  'Financial Services': [
+    { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Gold als Safe-Haven bei Bankenstress' },
+    { ticker: 'AAPL', name: 'Apple', sector: 'Big Tech', reason: 'Tech unkorreliert mit Zinsen' },
+    { ticker: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare', reason: 'Defensiv, zinssensitiv invers' },
+  ],
+  'Consumer Defensive': [
+    { ticker: 'TSLA', name: 'Tesla', sector: 'EV/Growth', reason: 'Wachstum vs. Defensive' },
+    { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech-Wachstum vs. Consumer Staples' },
+    { ticker: 'AMZN', name: 'Amazon', sector: 'E-Commerce', reason: 'Wachstumskomponente als Gegengewicht' },
+  ],
+  'Consumer Cyclical': [
+    { ticker: 'PG', name: 'Procter & Gamble', sector: 'Consumer Staples', reason: 'Defensiv wenn Konsum schwächt' },
+    { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Safe-Haven in Rezessionen' },
+    { ticker: 'KO', name: 'Coca-Cola', sector: 'Consumer Staples', reason: 'Stabil wenn Konsum einbricht' },
+  ],
+  'Industrials': [
+    { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Gold als Gegengewicht zu Industrie-Zyklizität' },
+    { ticker: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare', reason: 'Defensiv bei Konjunkturabkühlung' },
+    { ticker: 'KO', name: 'Coca-Cola', sector: 'Consumer Staples', reason: 'Rezessionsresistent' },
+  ],
+  'Energy': [
+    { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech profitiert wenn Energie fällt' },
+    { ticker: 'AAPL', name: 'Apple', sector: 'Big Tech', reason: 'Tech unkorreliert mit Ölpreisen' },
+    { ticker: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare', reason: 'Defensiv bei Energiepreisrückgang' },
+  ],
+  'Basic Materials': [
+    { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech vs. Rohstoffe gegensätzlich' },
+    { ticker: 'KO', name: 'Coca-Cola', sector: 'Consumer Staples', reason: 'Defensiv bei Rohstoffabschwung' },
+    { ticker: 'JNJ', name: 'Johnson & Johnson', sector: 'Healthcare', reason: 'Nicht-zyklisch vs. Rohstoffe' },
+  ],
+  'Real Estate': [
+    { ticker: 'AAPL', name: 'Apple', sector: 'Big Tech', reason: 'Tech wächst wenn Immobilien stagnieren' },
+    { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Alternative Store-of-Value' },
+    { ticker: 'AMZN', name: 'Amazon', sector: 'E-Commerce', reason: 'Online vs. physische Immobilien' },
+  ],
+  'Communication Services': [
+    { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Energie unkorreliert mit Medien' },
+    { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Safe-Haven bei Werbeeinbruch' },
+    { ticker: 'PG', name: 'Procter & Gamble', sector: 'Consumer Staples', reason: 'Defensiv, niedrige Korrelation' },
+  ],
+  'Utilities': [
+    { ticker: 'TSLA', name: 'Tesla', sector: 'EV/Growth', reason: 'Wachstum vs. defensive Versorger' },
+    { ticker: 'MSFT', name: 'Microsoft', sector: 'Big Tech', reason: 'Tech-Wachstum als Gegengewicht' },
+    { ticker: 'AMZN', name: 'Amazon', sector: 'E-Commerce', reason: 'Wachstumskomponente vs. Versorger' },
   ],
 };
+
+// Universal fallback — used when sector is unknown
+const DEFAULT_HEDGING = [
+  { ticker: 'GLD', name: 'Gold ETF (SPDR)', sector: 'Gold', reason: 'Safe-Haven für jedes Depot' },
+  { ticker: 'KO', name: 'Coca-Cola', sector: 'Consumer Staples', reason: 'Defensiver Anker, rezessionsresistent' },
+  { ticker: 'XOM', name: 'ExxonMobil', sector: 'Energy', reason: 'Energie als Diversifikation' },
+];
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -106,7 +164,8 @@ export async function GET(req: NextRequest) {
         .slice(0, 5)
         .map(([t, p]) => ({ ticker: t, name: t, sector: p.branche, index: '', sectorLabel: p.branche }));
 
-      const hedgingPairs = (HEDGING_MAP[sector ?? ''] ?? []).map(h => ({
+      const hedgingSource = HEDGING_MAP[sector ?? ''] ?? DEFAULT_HEDGING;
+      const hedgingPairs = hedgingSource.map(h => ({
         ticker: h.ticker, name: h.name, sector: h.sector, index: '', sectorLabel: h.sector, reason: h.reason,
       }));
 
@@ -114,5 +173,9 @@ export async function GET(req: NextRequest) {
     }
   } catch { /* ignore */ }
 
-  return NextResponse.json({ sector: null, sectorLabel: null, peers: [], hedgingPairs: [] });
+  // Universal fallback — always return at least default hedging pairs
+  return NextResponse.json({
+    sector: null, sectorLabel: null, peers: [],
+    hedgingPairs: DEFAULT_HEDGING.map(h => ({ ...h, index: '', sectorLabel: h.sector })),
+  });
 }
