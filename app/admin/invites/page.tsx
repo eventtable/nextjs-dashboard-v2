@@ -68,25 +68,24 @@ export default function AdminInvitesPage() {
     <div className="min-h-screen bg-[#0a0e1a]">
       <SharedHeader />
       <main className="p-4 lg:p-6 pt-20">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/admin" className="text-gray-400 hover:text-white transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Key className="w-6 h-6 text-[#f0b90b]" /> Einladungen
-              </h1>
-              <p className="text-gray-400 text-sm mt-1">Invite-Links erstellen und verwalten</p>
-            </div>
+        <div className="mb-4 flex items-center gap-3">
+          <Link href="/admin" className="text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Key className="w-6 h-6 text-[#f0b90b]" /> Einladungen
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">Invite-Links erstellen und verwalten</p>
           </div>
-          <button
-            onClick={() => { setShowForm(v => !v); setNewLink(null); }}
-            className="flex items-center gap-2 bg-[#f0b90b] hover:bg-[#d4a017] text-black font-semibold px-4 py-2 rounded-lg text-sm transition-all"
-          >
-            <Plus className="w-4 h-4" /> Neuen Link erstellen
-          </button>
         </div>
+
+        <button
+          onClick={() => { setShowForm(v => !v); setNewLink(null); }}
+          className="mb-6 flex items-center gap-2 bg-[#f0b90b] hover:bg-[#d4a017] text-black font-semibold px-5 py-2.5 rounded-lg text-sm transition-all"
+        >
+          <Plus className="w-4 h-4" /> Neuen Link erstellen
+        </button>
 
         {/* Error banner */}
         {error && (
