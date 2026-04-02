@@ -103,11 +103,13 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
 
   const fetchPeers = async (groupKey: string) => {
     setSelectedGroup(groupKey);
-    const group = PEER_GROUPS?.[groupKey];
+    const group = PEER_GROUPS?.[groupKey] as any;
     if (!group) return;
     setLoading(true);
     setPeers([]);
-    await loadPeerData(group.peers, setPeers);
+    // Include the group's main ticker (key) plus its peers
+    const tickers = [groupKey, ...(group.peers ?? [])].filter(Boolean);
+    await loadPeerData(tickers, setPeers);
     setLoading(false);
   };
 
@@ -131,7 +133,7 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
                 <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Ticker</th>
                 <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">Name</th>
                 <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Kurs</th>
-                <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">\u00c4nderung</th>
+                <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Änderung</th>
                 <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">KGV</th>
                 <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">Dividende</th>
                 <th className="text-right py-2 px-3 text-gray-500 font-medium text-xs">RSI</th>
@@ -212,7 +214,7 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
       <div className="glass-card rounded-xl p-5">
         <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
           <Users className="w-5 h-5 text-[#f0b90b]" />
-          Peer-Vergleich \u2013 {currentTicker}
+          Peer-Vergleich — {currentTicker}
         </h3>
 
         <div className="flex gap-2 mb-5">
@@ -242,7 +244,7 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
             {sectorData?.sectorLabel && (
               <div className="mb-4 bg-[#1a1f37] rounded-lg p-3">
                 <p className="text-sm text-gray-400">
-                  <span className="text-[#f0b90b] font-semibold">{currentTicker}</span> geh\u00f6rt zum Sektor{' '}
+                  <span className="text-[#f0b90b] font-semibold">{currentTicker}</span> gehört zum Sektor{' '}
                   <span className="text-white font-semibold">{sectorData.sectorLabel}</span>.
                   Hier sind die wichtigsten Wettbewerber:
                 </p>
@@ -267,8 +269,8 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
             <div className="mb-4 bg-[#1a1f37] rounded-lg p-3">
               <p className="text-sm text-gray-400">
                 <Shield className="w-4 h-4 text-[#22c55e] inline mr-1" />
-                <span className="text-white font-semibold">Hedging-Paare</span> \u2013 Aktien aus gegenl\u00e4ufigen Sektoren.
-                Wenn <span className="text-[#f0b90b]">{currentTicker}</span> schw\u00e4chelt, k\u00f6nnen diese profitieren:
+                <span className="text-white font-semibold">Hedging-Paare</span> — Aktien aus gegensätzlichen Sektoren.
+                Wenn <span className="text-[#f0b90b]">{currentTicker}</span> schwächelt, können diese profitieren:
               </p>
             </div>
             {sectorData?.hedgingPairs && sectorData.hedgingPairs.length > 0 ? (
@@ -312,7 +314,8 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
                       : 'bg-[#1a1f37] text-gray-400 hover:text-white border border-[#2a2f47]'
                   }`}
                 >
-                  {group?.name ?? key} ({(group?.tickers ?? []).join(', ')})
+                  {key}
+                  <span className="ml-1.5 text-xs opacity-60">{group?.branche ?? ''}</span>
                 </button>
               ))}
             </div>
@@ -324,7 +327,7 @@ export default function PeerComparison({ currentTicker, onAnalyze }: { currentTi
             ) : peers.length > 0 ? (
               renderPeerTable(peers)
             ) : (
-              <p className="text-gray-500 text-sm text-center py-8">W\u00e4hlen Sie eine Peer-Gruppe aus.</p>
+              <p className="text-gray-500 text-sm text-center py-8">Wählen Sie eine Peer-Gruppe aus.</p>
             )}
           </div>
         )}
