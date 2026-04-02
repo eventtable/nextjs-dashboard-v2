@@ -8,10 +8,10 @@ import {
 } from 'recharts';
 
 const STRATEGIES = [
-  { id: 'ma_cross',  label: 'MA-Crossover (50/200)', description: 'Kaufen wenn MA50 > MA200, Verkaufen wenn MA50 < MA200' },
-  { id: 'rsi',       label: 'RSI-Strategie',          description: 'Kaufen bei RSI < 30 (überverkauft), Verkaufen bei RSI > 70' },
-  { id: 'buy_hold',  label: 'Buy & Hold',             description: 'Einmaliger Kauf und Halten bis zum Laufzeitende' },
-  { id: 'momentum',  label: 'Momentum',               description: 'Kaufen bei positivem 3M-Momentum, Verkaufen bei negativem' },
+  { id: 'ma_cross',  label: 'MA-Crossover', color: '#f0b90b', description: 'Kaufen wenn MA50 > MA200, Verkaufen wenn MA50 < MA200' },
+  { id: 'rsi',       label: 'RSI',          color: '#60B5FF', description: 'Kaufen bei RSI < 30 (überverkauft), Verkaufen bei RSI > 70' },
+  { id: 'buy_hold',  label: 'Buy & Hold',   color: '#a855f7', description: 'Einmaliger Kauf und Halten bis zum Laufzeitende' },
+  { id: 'momentum',  label: 'Momentum',     color: '#f97316', description: 'Kaufen bei positivem 3M-Momentum, Verkaufen bei negativem' },
 ];
 
 const QUICK_TICKERS = [
@@ -63,13 +63,17 @@ function runBacktest(strategy: string, ticker: string, years: number, capital: n
 interface SearchResult { ticker: string; name: string; sector: string; index: string }
 interface RealPoint { month: string; real: number }
 
+interface AllResults {
+  data: { month: string; ma_cross: number; rsi: number; buy_hold: number; momentum: number }[];
+  stats: Record<string, { totalReturn: number; annReturn: number; maxDrawdown: number; sharpe: string; trades: number }>;
+}
+
 export default function BacktestPage() {
-  const [strategy, setStrategy] = useState('ma_cross');
   const [tickerInput, setTickerInput] = useState('SPY');
   const [selectedTicker, setSelectedTicker] = useState('SPY');
   const [years, setYears] = useState(5);
   const [capital, setCapital] = useState(10000);
-  const [result, setResult] = useState<ReturnType<typeof runBacktest> | null>(null);
+  const [result, setResult] = useState<AllResults | null>(null);
   const [running, setRunning] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -137,7 +141,28 @@ export default function BacktestPage() {
     setSelectedTicker(t);
     setRunning(true);
     setTimeout(() => {
-      setResult(runBacktest(strategy, t, years, capital));
+      // Run all 4 strategies
+      const runs = Object.fromEntries(
+        STRATEGIES.map(s => [s.id, runBacktest(s.id, t, years, capital)])
+      );
+      // Merge into combined data array
+      const combined = runs['ma_cross'].data.map((d, i) => ({
+        month: d.month,
+        ma_cross:  runs['ma_cross'].data[i].portfolio,
+        rsi:       runs['rsi'].data[i].portfolio,
+        buy_hold:  runs['buy_hold'].data[i].portfolio,
+        momentum:  runs['momentum'].data[i].portfolio,
+      }));
+      const stats = Object.fromEntries(
+        STRATEGIES.map(s => [s.id, {
+          totalReturn:  runs[s.id].totalReturn,
+          annReturn:    runs[s.id].annReturn,
+          maxDrawdown:  runs[s.id].maxDrawdown,
+          sharpe:       runs[s.id].sharpe,
+          trades:       runs[s.id].trades,
+        }])
+      );
+      setResult({ data: combined, stats });
       setRunning(false);
     }, 800);
     if (showReal) fetchRealData(t, years, capital);
@@ -262,21 +287,9 @@ export default function BacktestPage() {
 
         {/* Config */}
         <div className="glass-card rounded-xl p-6 border border-[#1a1f37]">
-          <h3 className="font-semibold text-white mb-4">Konfiguration</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-            {/* Strategy */}
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">Strategie</label>
-              <select
-                value={strategy}
-                onChange={e => setStrategy(e.target.value)}
-                className="w-full bg-[#1a1f37] border border-[#2a2f47] rounded-lg px-3 py-2 text-white text-sm focus:border-[#f0b90b] focus:outline-none"
-              >
-                {STRATEGIES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </select>
-              <p className="text-xs text-gray-600 mt-1">{STRATEGIES.find(s => s.id === strategy)?.description}</p>
-            </div>
+          <h3 className="font-semibold text-white mb-1">Konfiguration</h3>
+          <p className="text-xs text-gray-500 mb-4">Alle 4 Strategien werden gleichzeitig verglichen</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
             {/* Asset Search */}
             <div>
@@ -375,52 +388,89 @@ export default function BacktestPage() {
         </div>
 
         {/* Results */}
-        {result && (
+        {result && (() => {
+          const bestStratId = STRATEGIES.reduce((best, s) =>
+            result.stats[s.id].totalReturn > result.stats[best].totalReturn ? s.id : best,
+            STRATEGIES[0].id
+          );
+          const bestReturn = result.stats[bestStratId].totalReturn;
+          return (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: 'Gesamtrendite',  value: `${result.totalReturn.toFixed(1)}%`,                        positive: result.totalReturn > 0 },
-                { label: 'Jahresrendite',  value: `${result.annReturn.toFixed(1)}%`,                          positive: result.annReturn > 0 },
-                { label: 'vs. Benchmark',  value: `${(result.totalReturn - result.benchReturn).toFixed(1)}%`, positive: result.totalReturn > result.benchReturn },
-                { label: 'Max. Drawdown',  value: `${result.maxDrawdown.toFixed(1)}%`,                        positive: false },
-                { label: 'Sharpe Ratio',   value: result.sharpe,                                              positive: Number(result.sharpe) > 1 },
-                { label: 'Trades',         value: String(result.trades),                                      positive: true },
-              ].map(kpi => (
-                <div key={kpi.label} className="glass-card rounded-xl p-4 border border-[#1a1f37]">
-                  <p className="text-xs text-gray-500 mb-1">{kpi.label}</p>
-                  <p className={`text-lg font-bold ${kpi.positive ? 'text-green-400' : 'text-red-400'}`}>{kpi.value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Real data KPI banner */}
-            {showReal && (realLoading || realReturn !== null) && (
-              <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border text-sm ${
-                realReturn !== null && realReturn > result.totalReturn
-                  ? 'border-emerald-500/30 bg-emerald-500/5'
-                  : 'border-[#2a2f47] bg-[#1a1f37]/50'
-              }`}>
-                <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-gray-400">Echtes Buy &amp; Hold ({activeTicker}):</span>
-                {realLoading
-                  ? <span className="text-gray-500 text-xs">Lade Kursdaten…</span>
-                  : <span className={`font-bold ${realReturn! > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {realReturn! > 0 ? '+' : ''}{realReturn!.toFixed(1)}%
-                    </span>
-                }
-                {!realLoading && realReturn !== null && (
-                  <span className="text-xs text-gray-500 ml-auto">
-                    {realReturn > result.totalReturn
-                      ? `▲ Einfaches Halten wäre +${(realReturn - result.totalReturn).toFixed(1)}% besser gewesen`
-                      : `▼ Strategie hat echte Entwicklung um ${(result.totalReturn - realReturn).toFixed(1)}% übertroffen`}
-                  </span>
+            {/* Strategy comparison table */}
+            <div className="glass-card rounded-xl border border-[#1a1f37] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[#1a1f37] flex items-center justify-between">
+                <h3 className="font-semibold text-white text-sm">Strategievergleich – {activeTicker} · {years} Jahr{years > 1 ? 'e' : ''}</h3>
+                {showReal && (realLoading || realReturn !== null) && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="w-3 h-0.5 bg-emerald-400 inline-block" style={{borderTop:'2px dashed #22c55e', background:'none'}} />
+                    <span className="text-gray-400">Echtes Buy &amp; Hold:</span>
+                    {realLoading
+                      ? <span className="text-gray-500">Lade…</span>
+                      : <span className={`font-bold ${realReturn! > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {realReturn! > 0 ? '+' : ''}{realReturn!.toFixed(1)}%
+                        </span>
+                    }
+                  </div>
                 )}
               </div>
-            )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-[#1a1f37]">
+                {STRATEGIES.map(s => {
+                  const st = result.stats[s.id];
+                  const isWinner = s.id === bestStratId;
+                  const beatsReal = realReturn !== null && st.totalReturn > realReturn;
+                  return (
+                    <div key={s.id} className={`p-4 ${isWinner ? 'bg-[#f0b90b]/5' : ''}`}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                        <span className="text-xs font-semibold text-white">{s.label}</span>
+                        {isWinner && <span className="ml-auto text-[9px] font-bold text-[#f0b90b] bg-[#f0b90b]/15 px-1.5 py-0.5 rounded-full">BESTER</span>}
+                      </div>
+                      <p className={`text-2xl font-bold tabular-nums ${st.totalReturn > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {st.totalReturn > 0 ? '+' : ''}{st.totalReturn.toFixed(1)}%
+                      </p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Gesamtrendite</p>
+                      <div className="mt-3 space-y-1 text-xs">
+                        <div className="flex justify-between text-gray-500">
+                          <span>CAGR</span><span className="text-gray-300 font-medium">{st.annReturn.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between text-gray-500">
+                          <span>Max. DD</span><span className="text-red-400 font-medium">{st.maxDrawdown.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex justify-between text-gray-500">
+                          <span>Sharpe</span><span className={`font-medium ${Number(st.sharpe) > 1 ? 'text-green-400' : 'text-gray-400'}`}>{st.sharpe}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-500">
+                          <span>Trades</span><span className="text-gray-300 font-medium">{st.trades}</span>
+                        </div>
+                        {realReturn !== null && (
+                          <div className={`mt-2 pt-2 border-t border-[#1a1f37] text-[10px] font-semibold ${beatsReal ? 'text-green-400' : 'text-red-400'}`}>
+                            {beatsReal
+                              ? `+${(st.totalReturn - realReturn).toFixed(1)}% vs. echte Kurse`
+                              : `${(st.totalReturn - realReturn).toFixed(1)}% vs. echte Kurse`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {realReturn !== null && !realLoading && (
+                <div className="px-5 py-2.5 bg-emerald-500/5 border-t border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
+                  <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                  {(() => {
+                    const beatingCount = STRATEGIES.filter(s => result.stats[s.id].totalReturn > realReturn).length;
+                    if (beatingCount === 0) return `Einfaches Halten hätte alle Strategien geschlagen (+${realReturn.toFixed(1)}% echte Rendite)`;
+                    if (beatingCount === STRATEGIES.length) return `Alle ${STRATEGIES.length} Strategien schlagen echtes Buy & Hold (${realReturn.toFixed(1)}%)`;
+                    return `${beatingCount} von ${STRATEGIES.length} Strategien schlagen echtes Buy & Hold (${realReturn.toFixed(1)}%)`;
+                  })()}
+                </div>
+              )}
+            </div>
 
+            {/* Chart */}
             <div className="glass-card rounded-xl p-6 border border-[#1a1f37]">
-              <h3 className="font-semibold text-white mb-1">Portfolio-Entwicklung vs. Benchmark</h3>
-              <p className="text-xs text-gray-500 mb-4">{activeTicker} · {STRATEGIES.find(s => s.id === strategy)?.label} · {years} Jahr{years > 1 ? 'e' : ''}</p>
+              <h3 className="font-semibold text-white mb-1">Portfolio-Entwicklung – alle Strategien</h3>
+              <p className="text-xs text-gray-500 mb-4">{activeTicker} · {years} Jahr{years > 1 ? 'e' : ''} · Startkapital €{capital.toLocaleString('de-DE')}</p>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
@@ -429,31 +479,34 @@ export default function BacktestPage() {
                     <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />
                     <Tooltip
                       contentStyle={{ background: '#0f1629', border: '1px solid #1a1f37', borderRadius: '8px' }}
-                      formatter={(v: number, n: string) => [
-                        `€${v.toLocaleString('de-DE')}`,
-                        n === 'portfolio' ? 'Strategie (sim.)' : n === 'real' ? `Buy & Hold – ${activeTicker} (echt)` : 'Benchmark (SPY, sim.)'
-                      ]}
+                      formatter={(v: number, n: string) => {
+                        const s = STRATEGIES.find(s => s.id === n);
+                        return [`€${v.toLocaleString('de-DE')}`, s ? `${s.label} (sim.)` : `Buy & Hold ${activeTicker} (echt)`];
+                      }}
                     />
-                    <Legend formatter={v =>
-                      v === 'portfolio' ? 'Strategie (simuliert)' :
-                      v === 'real'      ? `Buy & Hold – ${activeTicker} (echte Kurse)` :
-                      'Benchmark SPY (simuliert)'
-                    } />
-                    <Line type="monotone" dataKey="portfolio" stroke="#f0b90b" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="benchmark" stroke="#60B5FF" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
+                    <Legend formatter={v => {
+                      const s = STRATEGIES.find(s => s.id === v);
+                      return s ? `${s.label} (sim.)` : `Buy & Hold ${activeTicker} (echt)`;
+                    }} />
+                    {STRATEGIES.map(s => (
+                      <Line key={s.id} type="monotone" dataKey={s.id} stroke={s.color}
+                        strokeWidth={s.id === bestStratId ? 2.5 : 1.5} dot={false} />
+                    ))}
                     {showReal && realData.length > 0 && (
-                      <Line type="monotone" dataKey="real" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="3 2" />
+                      <Line type="monotone" dataKey="real" stroke="#22c55e" strokeWidth={2.5}
+                        dot={false} strokeDasharray="4 2" />
                     )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
               <div className="mt-3 flex items-start gap-2 text-xs text-gray-500">
                 <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                Simulierte Ergebnisse basierend auf historischen Mustern. Vergangene Performance ist keine Garantie für zukünftige Ergebnisse.
+                Gelbe/blaue/lila/orange Linien = Simulation (nicht echte Kurse). Grün gestrichelt = echte Yahoo-Finance-Daten.
               </div>
             </div>
           </>
-        )}
+          );
+        })()}
 
       </main>
     </div>
