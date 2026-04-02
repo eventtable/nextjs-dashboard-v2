@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { depotPositionen } from '@/data/depot';
 import { getYahooAuth, fetchChartPrice } from '@/lib/yahoo-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_req: NextRequest) {
   try {
     const { cookie, crumb } = await getYahooAuth().catch(() => ({ cookie: '', crumb: '' }));
