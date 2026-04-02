@@ -3,16 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { 
-  Zap, 
-  Wallet, 
-  TrendingUp, 
-  Grid3X3, 
+import {
+  Zap,
+  Wallet,
+  TrendingUp,
+  Grid3X3,
   BellRing,
   Activity,
   Menu,
   X,
   LayoutGrid,
+  BarChart2,
   Shield,
   LogOut,
   User
@@ -35,6 +36,7 @@ const navItems = [
   { href: '/empfehlungen', label: 'Tipps', icon: TrendingUp },
   { href: '/smartmoney', label: 'Profis', icon: Grid3X3 },
   { href: '/risiko', label: 'Risiko', icon: BellRing },
+  { href: '/indizes', label: 'Indizes', icon: BarChart2 },
 ];
 
 export default function SharedHeader({ 
