@@ -9,6 +9,8 @@ const DEPOT_TOTAL = depotPositionen.reduce((s, p) => s + p.wertEur, 0);
 
 interface PortfolioData {
   totalValue: number;
+  totalChange: number;
+  totalChangePercent: number;
   isLoading: boolean;
 }
 
@@ -39,5 +41,5 @@ export function usePortfolio(): PortfolioData {
     setTotalValue(DEPOT_TOTAL);
   }, [status, session]);
 
-  return { totalValue, isLoading: status === 'loading' };
+  return { totalValue, totalChange: 0, totalChangePercent: 0, isLoading: status === 'loading' };
 }
