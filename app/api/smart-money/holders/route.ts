@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getYahooAuth } from '@/lib/yahoo-auth';
 
 export const dynamic = 'force-dynamic';
-
-const YAHOO_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Accept': 'application/json',
-};
 
 const EMPTY_RESPONSE = {
   institutionalHolders: [],
@@ -22,11 +18,19 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const { cookie, crumb } = await getYahooAuth().catch(() => ({ cookie: '', crumb: '' }));
     const modules = 'institutionOwnership,majorHoldersBreakdown,insiderTransactions';
-    const url = `https://query2.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}`;
+    const crumbParam = crumb ? `&crumb=${encodeURIComponent(crumb)}` : '';
+    const url = `https://query2.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}${crumbParam}`;
+
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'application/json',
+    };
+    if (cookie) headers['Cookie'] = cookie;
 
     const res = await fetch(url, {
-      headers: YAHOO_HEADERS,
+      headers,
       signal: AbortSignal.timeout(10000),
     });
 
