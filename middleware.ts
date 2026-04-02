@@ -29,13 +29,10 @@ export default withAuth(
       }
     }
 
-    // Friend-specific depot permission check
-    if (pathname.startsWith("/depot")) {
-      if (token?.isFriend && token?.permissions) {
-        const perms = token.permissions as any;
-        if (!perms.canViewDepot) {
-          return NextResponse.redirect(new URL("/", req.url));
-        }
+    // Depot: Admin-only — Freunde und normale Nutzer sehen kein Depot
+    if (pathname.startsWith("/depot") || pathname.startsWith("/api/depot")) {
+      if (!token?.isAdmin) {
+        return NextResponse.redirect(new URL("/", req.url));
       }
     }
 

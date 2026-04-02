@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { depotPositionen } from '@/data/depot';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!(session?.user as any)?.isAdmin) {
+    return NextResponse.json({ chartData: [] }, { status: 403 });
+  }
+
   try {
     // Fetch 6-month daily chart for each position in parallel
     const results = await Promise.allSettled(
