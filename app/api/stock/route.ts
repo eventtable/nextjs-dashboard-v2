@@ -1,39 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateRSI } from '@/lib/stock-utils';
 import type { StockData } from '@/lib/types';
-
-let cachedCookie = '';
-let cookieExpiry = 0;
-let cachedCrumb = '';
-
-async function getYahooCookieAndCrumb(): Promise<{ cookie: string; crumb: string }> {
-  if (cachedCookie && cachedCrumb && Date.now() < cookieExpiry) {
-    return { cookie: cachedCookie, crumb: cachedCrumb };
-  }
-
-  // Step 1: Get cookie
-  const cookieRes = await fetch('https://finance.yahoo.com/', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html',
-      'Accept-Language': 'de-DE,de;q=0.9',
-    },
-  });
-  const setCookie = cookieRes.headers.get('set-cookie') || '';
-  cachedCookie = setCookie.split(';')[0] || '';
-
-  // Step 2: Get crumb
-  const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Cookie': cachedCookie,
-    },
-  });
-  cachedCrumb = await crumbRes.text();
-  cookieExpiry = Date.now() + 25 * 60 * 1000;
-
-  return { cookie: cachedCookie, crumb: cachedCrumb };
-}
+import { getYahooAuth, yahooHeaders } from '@/lib/yahoo-auth';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -45,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { cookie, crumb } = await getYahooCookieAndCrumb();
+    const { cookie, crumb } = await getYahooAuth();
 
     const modules = [
       'summaryDetail',
@@ -58,13 +26,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch quote summary
     const summaryUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(ticker)}?modules=${modules}&crumb=${encodeURIComponent(crumb)}`;
-    const summaryRes = await fetch(summaryUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-        'Cookie': cookie,
-      },
-    });
+    const summaryRes = await fetch(summaryUrl, { headers: yahooHeaders(cookie) });
 
     if (!summaryRes.ok) {
       const errText = await summaryRes.text();
@@ -94,13 +56,7 @@ export async function GET(req: NextRequest) {
     let previousClose = sd.regularMarketPreviousClose?.raw ?? 0;
 
     try {
-      const chartRes = await fetch(chartUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-          'Accept': 'application/json',
-          'Cookie': cookie,
-        },
-      });
+      const chartRes = await fetch(chartUrl, { headers: yahooHeaders(cookie) });
       if (chartRes.ok) {
         const chartJson = await chartRes.json();
         const chartResult = chartJson?.chart?.result?.[0];

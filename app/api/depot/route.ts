@@ -1,41 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { depotPositionen } from '@/data/depot';
-
-let cachedCookie = '';
-let cookieExpiry = 0;
-let cachedCrumb = '';
-
-async function getYahooCookieAndCrumb(): Promise<{ cookie: string; crumb: string }> {
-  if (cachedCookie && cachedCrumb && Date.now() < cookieExpiry) {
-    return { cookie: cachedCookie, crumb: cachedCrumb };
-  }
-  try {
-    const cookieRes = await fetch('https://finance.yahoo.com/', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html',
-      },
-    });
-    const setCookie = cookieRes.headers.get('set-cookie') || '';
-    cachedCookie = setCookie.split(';')[0] || '';
-
-    const crumbRes = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Cookie': cachedCookie,
-      },
-    });
-    cachedCrumb = await crumbRes.text();
-    cookieExpiry = Date.now() + 25 * 60 * 1000;
-  } catch {
-    // proceed without cookie/crumb; fallback prices will be used
-  }
-  return { cookie: cachedCookie, crumb: cachedCrumb };
-}
+import { getYahooAuth, yahooHeaders } from '@/lib/yahoo-auth';
 
 export async function GET(_req: NextRequest) {
   try {
-    const { cookie, crumb } = await getYahooCookieAndCrumb();
+    const { cookie, crumb } = await getYahooAuth().catch(() => ({ cookie: '', crumb: '' }));
 
     const livePrices: Record<string, { price: number; changePercent: number }> = {};
 
@@ -48,13 +17,7 @@ export async function GET(_req: NextRequest) {
             ? `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(pos.ticker)}?interval=1d&range=2d&crumb=${encodeURIComponent(crumb)}`
             : `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(pos.ticker)}?interval=1d&range=2d`;
 
-          const res = await fetch(url, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'application/json',
-              ...(cookie ? { 'Cookie': cookie } : {}),
-            },
-          });
+          const res = await fetch(url, { headers: yahooHeaders(cookie) });
           if (!res.ok) return;
 
           const data = await res.json();
