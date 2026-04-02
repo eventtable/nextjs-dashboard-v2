@@ -1,24 +1,23 @@
 /**
  * Yahoo Finance cookie + crumb authentication.
+ * Uses fc.yahoo.com for reliable cookie acquisition from datacenter IPs
+ * (same approach as Python yfinance library).
  */
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 let cachedCookie  = '';
 let cachedCrumb   = '';
 let cookieExpiry  = 0;
 
-/** Extract all Set-Cookie values from a response and join them for the Cookie header */
+/** Extract all Set-Cookie values from a response */
 function extractCookies(res: Response): string {
-  // Node 18.14+ supports getSetCookie() returning string[]
   if (typeof (res.headers as any).getSetCookie === 'function') {
     const cookies: string[] = (res.headers as any).getSetCookie();
     return cookies.map((c: string) => c.split(';')[0]).join('; ');
   }
-  // Fallback: undici concatenates Set-Cookie headers with ", "
-  // Split carefully: cookie entries start after ", " followed by a word char
   const raw = res.headers.get('set-cookie') || '';
   if (!raw) return '';
   return raw.split(/,\s*(?=[A-Za-z0-9_-]+=)/).map(c => c.split(';')[0]).join('; ');
@@ -30,53 +29,82 @@ export function clearYahooCache() {
   cookieExpiry = 0;
 }
 
-export async function getYahooAuth(): Promise<{ cookie: string; crumb: string }> {
-  if (cachedCookie && cachedCrumb && Date.now() < cookieExpiry) {
-    return { cookie: cachedCookie, crumb: cachedCrumb };
-  }
-
-  // Step 1: Get cookies from Yahoo Finance homepage
-  let cookie = '';
+async function acquireCookies(): Promise<string> {
+  // Strategy 1: fc.yahoo.com (most reliable from datacenter IPs)
+  // This endpoint always sets cookies even without following redirects
   try {
-    const homeRes = await fetch('https://finance.yahoo.com/', {
+    const res = await fetch('https://fc.yahoo.com', {
+      headers: { 'User-Agent': UA },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(5000),
+    });
+    const cookies = extractCookies(res);
+    if (cookies) return cookies;
+  } catch { /* try next */ }
+
+  // Strategy 2: finance.yahoo.com homepage
+  try {
+    const res = await fetch('https://finance.yahoo.com/', {
       headers: {
         'User-Agent': UA,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'en-US,en;q=0.9',
       },
       redirect: 'follow',
       signal: AbortSignal.timeout(8000),
     });
-    cookie = extractCookies(homeRes);
-  } catch { /* ignore, try crumb without cookie */ }
+    const cookies = extractCookies(res);
+    if (cookies) return cookies;
+  } catch { /* try next */ }
 
-  // Step 2: Get crumb — try query1 then query2, with and without cookie
+  // Strategy 3: consent cookie directly
+  try {
+    const res = await fetch('https://consent.yahoo.com/v2/collectConsent?sessionId=1', {
+      headers: { 'User-Agent': UA },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(5000),
+    });
+    const cookies = extractCookies(res);
+    if (cookies) return cookies;
+  } catch { /* ignore */ }
+
+  return '';
+}
+
+export async function getYahooAuth(): Promise<{ cookie: string; crumb: string }> {
+  if (cachedCookie && cachedCrumb && Date.now() < cookieExpiry) {
+    return { cookie: cachedCookie, crumb: cachedCrumb };
+  }
+
+  const cookie = await acquireCookies();
+
+  // Get crumb using the acquired cookies
   let crumb = '';
-  const crumbHosts = ['query1', 'query2'];
-  for (const host of crumbHosts) {
+  for (const host of ['query2', 'query1']) {
     try {
       const headers: Record<string, string> = { 'User-Agent': UA };
       if (cookie) headers['Cookie'] = cookie;
       const r = await fetch(`https://${host}.finance.yahoo.com/v1/test/getcrumb`, {
         headers,
+        redirect: 'follow',
         signal: AbortSignal.timeout(5000),
       });
+      if (!r.ok) continue;
       const text = (await r.text()).trim();
-      // Valid crumb: non-empty, not HTML, not "Unauthorized"
-      if (text && !text.startsWith('<') && text !== 'Unauthorized' && text.length < 50) {
+      if (text && !text.startsWith('<') && text !== 'Unauthorized' && text.length < 80) {
         crumb = text;
         break;
       }
     } catch { /* try next */ }
   }
 
-  if (crumb) {
+  if (cookie && crumb) {
     cachedCookie = cookie;
     cachedCrumb  = crumb;
-    cookieExpiry = Date.now() + 20 * 60 * 1000;
+    cookieExpiry = Date.now() + 15 * 60 * 1000;
   }
 
-  return { cookie, crumb };
+  return { cookie: cookie || cachedCookie, crumb: crumb || cachedCrumb };
 }
 
 export function yahooHeaders(cookie: string): HeadersInit {
@@ -105,8 +133,6 @@ export async function fetchChartPrice(
     const meta = data?.chart?.result?.[0]?.meta;
     if (!meta) return null;
 
-    // Only use live price if Yahoo returns EUR – otherwise the static EUR
-    // price from depot.ts is more accurate than an unconverted foreign price
     if (meta.currency && meta.currency !== 'EUR') return null;
 
     const price     = meta.regularMarketPrice ?? meta.previousClose;
