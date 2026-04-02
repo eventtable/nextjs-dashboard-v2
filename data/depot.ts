@@ -95,7 +95,7 @@ export const depotPositionen: Position[] = [
   // ── ETFs ──────────────────────────────────────────────────────────────────
   {
     id: '8', name: 'HanETF Future of Defence ETF', shortName: 'NATO ETF',
-    ticker: 'NATO', isin: 'IE000OJ5TQP4', typ: 'ETF',
+    ticker: 'NATO.L', isin: 'IE000OJ5TQP4', typ: 'ETF',
     category: 'etf', strategy: 'etf', currency: 'USD', lagerland: 'UK',
     stueck: 31, kursProStueck: 16.98, einstandKurs: 18.02,
     wertEur: 526.44, gewinnEur: -32.24, performanceProzent: -5.8,
@@ -109,7 +109,7 @@ export const depotPositionen: Position[] = [
   },
   {
     id: '10', name: 'WisdomTree DAX 3x Short ETP', shortName: '3x Short DAX',
-    ticker: '3DES', isin: 'IE00B8GKPP93', typ: 'ETF',
+    ticker: 'DXPS.L', isin: 'IE00B8GKPP93', typ: 'ETF',
     category: 'etp', strategy: 'absicherung', currency: 'EUR', lagerland: 'Irland',
     stueck: 2000, kursProStueck: 0.1897, einstandKurs: 0.233,
     wertEur: 379.40, gewinnEur: -86.60, performanceProzent: -18.6,
