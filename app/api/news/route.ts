@@ -45,23 +45,23 @@ async function translateToGerman(titles: string[]): Promise<string[]> {
   try {
     const prompt = `Translate these financial news headlines to German. Return ONLY a JSON array of translated strings, same order:\n${JSON.stringify(titles)}`;
 
-    const res = await fetch('https://api.abacus.ai/api/v0/describeFeatureGroup', {
+    const res = await fetch('https://api.abacus.ai/api/v0/getLlmResponse', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apiKey': ABACUS_API_KEY,
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1000,
+        deploymentToken: ABACUS_API_KEY,
+        prompt,
+        llmName: 'GPT_4O_MINI',
       }),
     });
 
     if (!res.ok) return titles;
 
     const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content || '';
+    const content = data?.response || data?.choices?.[0]?.message?.content || '';
     const match = content.match(/\[[\s\S]*\]/);
     if (match) {
       return JSON.parse(match[0]);

@@ -20,7 +20,7 @@ export default function MLPerformanceWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/ml_data/ml_scorecard.json')
+    fetch('/api/ml-predictions')
       .then(res => res.json())
       .then(data => {
         setData(data);

@@ -1,42 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFileSync, existsSync } from 'fs';
-import path from 'path';
 
-// ML prediction data - reads from public/ml_data/ JSON files
-// Falls back to mock data if VPS ML API is unavailable
+export const dynamic = 'force-dynamic';
+
+const ML_API_URL = process.env.ML_API_URL || '';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const symbol = searchParams.get('symbol') || 'AAPL';
 
-  // Try to read cached ML data from public folder
-  const mlDataPath = path.join(process.cwd(), 'public', 'ml_data', `${symbol}.json`);
-  if (existsSync(mlDataPath)) {
+  // Proxy to VPS ML server if configured
+  if (ML_API_URL) {
     try {
-      const data = JSON.parse(readFileSync(mlDataPath, 'utf-8'));
-      return NextResponse.json(data);
+      const params = new URLSearchParams();
+      searchParams.forEach((v, k) => params.set(k, v));
+      const url = `${ML_API_URL}/api/ml-predictions${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url, {
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json(data);
+      }
     } catch {
       // Fall through to mock data
     }
   }
 
-  // Fallback: generate mock ML prediction data
-  const today = new Date();
-  const predictions = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i + 1);
-    return {
-      date: date.toISOString().split('T')[0],
-      predicted: 100 + Math.random() * 20 - 10,
-      confidence: 0.6 + Math.random() * 0.3,
-      signal: Math.random() > 0.5 ? 'BUY' : Math.random() > 0.5 ? 'HOLD' : 'SELL',
-    };
-  });
-
+  // Fallback mock data matching VPS response shape
   return NextResponse.json({
-    symbol,
-    predictions,
-    modelAccuracy: 0.72,
-    lastTrained: new Date(today.setDate(today.getDate() - 1)).toISOString(),
+    predictions: [],
+    summary: {
+      win_rate: 0,
+      total_predictions: 0,
+      correct_predictions: 0,
+      wrong_predictions: 0,
+      score_grade: 'N/A',
+    },
+    liveSummary: null,
+    backtestSummary: null,
+    pagination: { page: 1, per_page: 20, total: 0, pages: 0 },
     source: 'fallback',
   });
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+
+  if (ML_API_URL) {
+    try {
+      const res = await fetch(`${ML_API_URL}/api/ml-predictions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return NextResponse.json(data);
+      }
+    } catch {
+      // Fall through
+    }
+  }
+
+  return NextResponse.json({ status: 'fallback', data: null });
 }
