@@ -64,6 +64,11 @@ export async function fetchChartPrice(
     const data = await res.json();
     const meta = data?.chart?.result?.[0]?.meta;
     if (!meta) return null;
+
+    // Only use live price if Yahoo returns EUR – otherwise the static EUR
+    // price from depot.ts is more accurate than an unconverted foreign price
+    if (meta.currency && meta.currency !== 'EUR') return null;
+
     const price     = meta.regularMarketPrice ?? meta.previousClose;
     const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? price;
     return {
