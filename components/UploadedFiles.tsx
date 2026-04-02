@@ -54,7 +54,7 @@ export default function UploadedFiles() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-gray-900">{file.name}</p>
               <p className="text-xs text-gray-500">
-                {formatBytes(file.size)} &middot;{" "}
+                {formatBytes(file.size)} ·{" "}
                 {file.uploadedAt.toLocaleTimeString("de-DE", {
                   hour: "2-digit",
                   minute: "2-digit",

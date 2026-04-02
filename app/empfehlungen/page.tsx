@@ -589,7 +589,7 @@ export default function EmpfehlungenPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="bg-[#0d1220] rounded-lg p-4 border border-[#1a1f37]">
               <div className="font-semibold text-emerald-400 mb-2">61.8% — Goldene Zone</div>
-              <p className="text-gray-400">Das &quot;goldene Verhältnis&quot;. Starke Unterstützung, ideal für Nachkäufe wenn Kurs hier abprallt.</p>
+              <p className="text-gray-400">Das "goldene Verhältnis". Starke Unterstützung, ideal für Nachkäufe wenn Kurs hier abprallt.</p>
             </div>
             <div className="bg-[#0d1220] rounded-lg p-4 border border-[#1a1f37]">
               <div className="font-semibold text-yellow-400 mb-2">38.2% — Widerstand</div>

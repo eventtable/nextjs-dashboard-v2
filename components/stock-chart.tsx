@@ -29,6 +29,16 @@ const EMA_CONFIG = [
   { period: 200, color: '#ef4444', label: 'EMA 200' },
 ];
 
+const FIB_LEVELS = [
+  { level: 0,     label: '0%',     color: '#9ca3af' },
+  { level: 0.236, label: '23.6%',  color: '#60B5FF' },
+  { level: 0.382, label: '38.2%',  color: '#a855f7' },
+  { level: 0.5,   label: '50%',    color: '#f0b90b' },
+  { level: 0.618, label: '61.8%',  color: '#22c55e' },
+  { level: 0.786, label: '78.6%',  color: '#f97316' },
+  { level: 1,     label: '100%',   color: '#9ca3af' },
+];
+
 interface Props {
   data: StockData;
   range: '1y' | '5y';
@@ -41,6 +51,7 @@ const PAD = { top: 16, right: 68, bottom: 28, left: 8 };
 export default function StockChart({ data, range, onRangeChange }: Props) {
   const [chartType, setChartType] = useState<'candle' | 'line'>('candle');
   const [activeEMAs, setActiveEMAs] = useState<Record<number, boolean>>({ 20: false, 50: true, 100: false, 200: true });
+  const [showFib, setShowFib] = useState(false);
   const [tooltip, setTooltip] = useState<{ i: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -137,7 +148,7 @@ export default function StockChart({ data, range, onRangeChange }: Props) {
         </div>
       </div>
 
-      {/* EMA toggles */}
+      {/* EMA + Fibonacci toggles */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {EMA_CONFIG.map(cfg => (
           <button key={cfg.period}
@@ -149,6 +160,15 @@ export default function StockChart({ data, range, onRangeChange }: Props) {
             <TrendingUp className="w-3 h-3" /> {cfg.label}
           </button>
         ))}
+        {(data?.fiftyTwoWeekHigh != null && data?.fiftyTwoWeekLow != null) && (
+          <button
+            onClick={() => setShowFib(prev => !prev)}
+            className={`flex items-center gap-1 px-2.5 py-0.5 text-xs rounded-full border transition-all font-semibold ${
+              showFib ? 'border-transparent text-black bg-[#22c55e]' : 'border-[#2a2f47] text-gray-500 hover:border-gray-400 bg-transparent'
+            }`}>
+            〜 Fibonacci
+          </button>
+        )}
       </div>
 
       {/* Chart SVG */}
@@ -223,6 +243,29 @@ export default function StockChart({ data, range, onRangeChange }: Props) {
                 stroke={cfg.color} strokeWidth={1.5} clipPath="url(#pc)" />
             ) : null;
           })}
+
+          {/* Fibonacci levels */}
+          {showFib && data?.fiftyTwoWeekHigh != null && data?.fiftyTwoWeekLow != null && (() => {
+            const fibHigh = data.fiftyTwoWeekHigh!;
+            const fibLow = data.fiftyTwoWeekLow!;
+            const range = fibHigh - fibLow;
+            return FIB_LEVELS.map(fib => {
+              const price = fibHigh - range * fib.level;
+              if (price < priceMin || price > priceMax) return null;
+              const y = yOf(price);
+              return (
+                <g key={fib.level}>
+                  <line
+                    x1={PAD.left} y1={y} x2={PAD.left + plotW} y2={y}
+                    stroke={fib.color} strokeWidth={1} strokeDasharray="5,4" opacity={0.7}
+                  />
+                  <text x={PAD.left + plotW + 5} y={y + 4} fontSize={8} fill={fib.color} textAnchor="start" fontWeight="600">
+                    {fib.label}
+                  </text>
+                </g>
+              );
+            });
+          })()}
 
           {/* Crosshair */}
           {tooltip !== null && (

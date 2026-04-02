@@ -566,7 +566,7 @@ export function getHilfetext(key: string): string {
     
     shortRatio: '📉 Short Ratio = Tage bis Leerverkäufer decken müssen\n\n🟢 < 2: Normal\n🟡 2-5: Erhöht\n🔴 > 5: Sehr hoch (Short-Squeeze-Risiko!)\n\nHoher Wert kann zu plötzlichen Kursrallys führen.',
     
-    perf52W: '📆 52-Wochen-Performance = Kursänderung über 1 Jahr\n\nZeigt den langfristigen Trend.\nVergleiche mit Index (DAX/S\u0026P 500).\n\n🟢 > +20%: Outperformance\n🟡 ±20%: Marktperformance\n🔴 < -20%: Underperformance'
+    perf52W: '📆 52-Wochen-Performance = Kursänderung über 1 Jahr\n\nZeigt den langfristigen Trend.\nVergleiche mit Index (DAX/S&P 500).\n\n🟢 > +20%: Outperformance\n🟡 ±20%: Marktperformance\n🔴 < -20%: Underperformance'
   };
   return hilfetexte[key] || '';
 }
