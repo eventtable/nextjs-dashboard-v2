@@ -67,18 +67,29 @@ export default function EmpfehlungenPage() {
     }
   };
 
+  // Border-only colors — keeps cards readable without heavy background tint
   const getEmpfehlungColor = (empfehlung: string) => {
     switch (empfehlung) {
       case 'stark-nachkaufen':
-        return 'bg-red-500/20 border-red-500/30 text-red-400';
+        return 'border-l-4 border-l-red-500 border border-[#1a1f37]';
       case 'nachkaufen':
-        return 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400';
+        return 'border-l-4 border-l-emerald-500 border border-[#1a1f37]';
       case 'beobachten':
-        return 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400';
+        return 'border-l-4 border-l-yellow-500 border border-[#1a1f37]';
       case 'verkaufen':
-        return 'bg-orange-500/20 border-orange-500/30 text-orange-400';
+        return 'border-l-4 border-l-orange-500 border border-[#1a1f37]';
       default:
-        return 'bg-blue-500/20 border-blue-500/30 text-blue-400';
+        return 'border-l-4 border-l-blue-500 border border-[#1a1f37]';
+    }
+  };
+
+  const getEmpfehlungBadgeColor = (empfehlung: string) => {
+    switch (empfehlung) {
+      case 'stark-nachkaufen': return 'bg-red-500/15 border-red-500/40 text-red-400';
+      case 'nachkaufen': return 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400';
+      case 'beobachten': return 'bg-yellow-500/15 border-yellow-500/40 text-yellow-400';
+      case 'verkaufen': return 'bg-orange-500/15 border-orange-500/40 text-orange-400';
+      default: return 'bg-blue-500/15 border-blue-500/40 text-blue-400';
     }
   };
 
@@ -205,30 +216,35 @@ export default function EmpfehlungenPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className={`bg-[#0d1220] rounded-xl p-4 border ${getEmpfehlungColor(empf.empfehlung)}`}
+                className={`bg-[#0d1220] rounded-xl p-4 ${getEmpfehlungColor(empf.empfehlung)}`}
               >
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
                     {getEmpfehlungIcon(empf.empfehlung)}
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-lg">{empf.ticker}</span>
-                        <span className="text-gray-400">{empf.name}</span>
+                        <span className="font-bold text-lg text-white">{empf.ticker}</span>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full border font-semibold ${getEmpfehlungBadgeColor(empf.empfehlung)}`}>
+                          {getEmpfehlungLabel(empf.empfehlung)}
+                        </span>
                         <span className="text-xs px-2 py-0.5 rounded bg-[#1a1f37] text-gray-400">{empf.typ}</span>
                       </div>
-                      <p className="text-sm mt-1 text-gray-300">{empf.begruendung}</p>
+                      <p className="text-sm text-gray-300 mt-0.5">{empf.name}</p>
+                      <p className="text-xs mt-1 text-gray-400">{empf.begruendung}</p>
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0 ml-4">
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${getEmpfehlungColor(empf.empfehlung)}`}>
-                      {getEmpfehlungLabel(empf.empfehlung)}
-                    </span>
-                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(empf.gesamtScore)}`}>
-                      {empf.gesamtScore}
+                  <div className="text-right shrink-0 ml-4 flex flex-col items-end gap-1">
+                    {/* Aktueller Kurs — prominent */}
+                    <div className="text-xl font-bold text-white">{empf.aktuellerKurs.toFixed(2)} €</div>
+                    <div className={`text-sm font-semibold ${empf.abstandProzent < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {empf.abstandProzent > 0 ? '+' : ''}{empf.abstandProzent.toFixed(1)}% vs Buy-In
                     </div>
-                    <div className="text-xs text-gray-500">Matrix Score</div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className={`text-2xl font-bold ${getScoreColor(empf.gesamtScore)}`}>{empf.gesamtScore}</span>
+                      <span className="text-xs text-gray-500">Score</span>
+                    </div>
                   </div>
                 </div>
 
@@ -315,26 +331,20 @@ export default function EmpfehlungenPage() {
                 )}
 
                 {/* Kurse & Levels */}
-                <div className="flex flex-wrap gap-4 text-sm pt-3 border-t border-[#1a1f37]">
+                <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm pt-3 border-t border-[#1a1f37]">
                   <span className="text-gray-500">
-                    Buy-In: <span className="text-white font-medium">{empf.buyIn.toFixed(2)} €</span>
-                  </span>
-                  <span className="text-gray-500">
-                    Aktuell: <span className="text-white font-medium">{empf.aktuellerKurs.toFixed(2)} €</span>
-                  </span>
-                  <span className={`font-medium ${empf.abstandProzent < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                    {empf.abstandProzent > 0 ? '+' : ''}{empf.abstandProzent.toFixed(1)}%
+                    Buy-In: <span className="text-white font-semibold">{empf.buyIn.toFixed(2)} €</span>
                   </span>
                   {empf.nachkaufZone && empf.nachkaufZone !== 'Keine Zone' && (
                     <span className="text-gray-500">
-                      Zone: <span className="text-emerald-400">{empf.nachkaufZone}</span>
+                      Kaufzone: <span className="text-emerald-400 font-medium">{empf.nachkaufZone}</span>
                     </span>
                   )}
                   <span className="text-gray-500">
-                    Stop-Loss: <span className="text-red-400">{empf.stopLoss}</span>
+                    Stop-Loss: <span className="text-red-400 font-medium">{empf.stopLoss}</span>
                   </span>
                   <span className="text-gray-500">
-                    Ziel: <span className="text-emerald-400">{empf.zielKurs}</span>
+                    Kursziel: <span className="text-emerald-400 font-medium">{empf.zielKurs}</span>
                   </span>
                 </div>
 

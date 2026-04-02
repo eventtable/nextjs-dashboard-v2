@@ -1,182 +1,119 @@
 'use client';
 
-import { Users, TrendingUp, TrendingDown, ArrowRight, Building } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Users, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 
-interface InsiderTrade {
-  company: string;
-  ticker: string;
-  insider: string;
-  position: string;
-  type: 'buy' | 'sell';
-  shares: string;
-  value: string;
-  date: string;
-  significance: 'high' | 'medium' | 'low';
+interface InsiderTx {
+  name: string;
+  relation: string;
+  type: string;
+  shares: number | null;
+  value: number | null;
+  date: string | null;
 }
 
-const insiderTrades: InsiderTrade[] = [
-  {
-    company: 'NVIDIA',
-    ticker: 'NVDA',
-    insider: 'Jensen Huang',
-    position: 'CEO',
-    type: 'sell',
-    shares: '50,000',
-    value: '$4.2 Mio',
-    date: '15.03.2026',
-    significance: 'high',
-  },
-  {
-    company: 'Microsoft',
-    ticker: 'MSFT',
-    insider: 'Satya Nadella',
-    position: 'CEO',
-    type: 'buy',
-    shares: '10,000',
-    value: '$3.8 Mio',
-    date: '12.03.2026',
-    significance: 'high',
-  },
-  {
-    company: 'Apple',
-    ticker: 'AAPL',
-    insider: 'Tim Cook',
-    position: 'CEO',
-    type: 'sell',
-    shares: '100,000',
-    value: '$18.5 Mio',
-    date: '10.03.2026',
-    significance: 'high',
-  },
-  {
-    company: 'Tesla',
-    ticker: 'TSLA',
-    insider: 'Elon Musk',
-    position: 'CEO',
-    type: 'sell',
-    shares: '500,000',
-    value: '$125 Mio',
-    date: '08.03.2026',
-    significance: 'high',
-  },
-  {
-    company: 'Berkshire Hathaway',
-    ticker: 'BRK.B',
-    insider: 'Warren Buffett',
-    position: 'CEO',
-    type: 'buy',
-    shares: '2,500,000',
-    value: '$950 Mio',
-    date: '05.03.2026',
-    significance: 'high',
-  },
-];
+export function InsiderTransactions({ ticker }: { ticker: string }) {
+  const [transactions, setTransactions] = useState<InsiderTx[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export function InsiderTransactions() {
+  useEffect(() => {
+    if (!ticker) return;
+    setLoading(true);
+    setTransactions([]);
+    fetch(`/api/smart-money/holders?ticker=${encodeURIComponent(ticker)}`)
+      .then(r => r.json())
+      .then(d => { setTransactions(d.insiderTransactions ?? []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [ticker]);
+
+  const isBuy = (type: string) => /buy|purchase|kauf/i.test(type);
+  const isSell = (type: string) => /sell|sale|verkauf/i.test(type);
+
+  const fmt = (n: number | null) =>
+    n == null ? '—' : n >= 1e6 ? `$${(n / 1e6).toFixed(1)} Mio` : `$${n.toLocaleString('de-DE')}`;
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-16 bg-[#1a1f37] rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  const buys = transactions.filter(t => isBuy(t.type));
+  const sells = transactions.filter(t => isSell(t.type));
+
   return (
-    <div className="space-y-6">
-      <div className="bg-[#0d1220] border border-[#1a1f37] rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Users className="w-5 h-5 text-[#f0b90b]" />
-              👥 Insider Transaktionen
-            </h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Käufe & Verkäufe von Unternehmensinsidern
-            </p>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Users className="w-5 h-5 text-[#f0b90b]" />
+        <h3 className="font-semibold">Insider-Transaktionen — {ticker}</h3>
+      </div>
+
+      {transactions.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-emerald-400">{buys.length}</div>
+            <div className="text-xs text-gray-400 mt-1">Käufe</div>
           </div>
-          <div className="flex gap-2">
-            <div className="flex items-center gap-1 text-xs text-emerald-400">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              Kauf
-            </div>
-            <div className="flex items-center gap-1 text-xs text-red-400">
-              <div className="w-2 h-2 rounded-full bg-red-400" />
-              Verkauf
-            </div>
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-red-400">{sells.length}</div>
+            <div className="text-xs text-gray-400 mt-1">Verkäufe</div>
           </div>
         </div>
+      )}
 
-        <div className="space-y-3">
-          {insiderTrades.map((trade) => (
-            <div
-              key={`${trade.ticker}-${trade.date}`}
-              className="bg-[#1a1f37] border border-[#252a3d] rounded-lg p-4 hover:border-[#f0b90b]/30 transition-all"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    trade.type === 'buy' ? 'bg-emerald-500/20' : 'bg-red-500/20'
+      {transactions.length === 0 ? (
+        <div className="text-gray-400 text-sm p-4 bg-[#1a1f37] rounded-lg">
+          Keine Insider-Transaktionen für {ticker} gefunden.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {transactions.slice(0, 15).map((tx, i) => {
+            const buy = isBuy(tx.type);
+            const sell = isSell(tx.type);
+            return (
+              <div
+                key={i}
+                className={`rounded-lg px-4 py-3 border flex items-center justify-between gap-4 ${
+                  buy ? 'bg-emerald-500/5 border-emerald-500/20' :
+                  sell ? 'bg-red-500/5 border-red-500/20' :
+                  'bg-[#1a1f37] border-[#252a3d]'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    buy ? 'bg-emerald-500/20' : sell ? 'bg-red-500/20' : 'bg-gray-500/20'
                   }`}>
-                    {trade.type === 'buy' ? (
-                      <TrendingUp className="w-5 h-5 text-emerald-400" />
-                    ) : (
-                      <TrendingDown className="w-5 h-5 text-red-400" />
-                    )}
+                    {buy ? <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> :
+                     sell ? <TrendingDown className="w-3.5 h-3.5 text-red-400" /> :
+                     <ArrowRight className="w-3.5 h-3.5 text-gray-400" />}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{trade.company}</span>
-                      <span className="text-xs text-gray-400">({trade.ticker})</span>
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      {trade.insider} • {trade.position}
-                    </div>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      <span className="text-gray-400">
-                        Aktien: <span className="text-white">{trade.shares}</span>
-                      </span>
-                      <span className="text-gray-400">
-                        Wert: <span className={trade.type === 'buy' ? 'text-emerald-400' : 'text-red-400'}>{trade.value}</span>
-                      </span>
-                      <span className="text-gray-400">
-                        Datum: <span className="text-white">{trade.date}</span>
-                      </span>
-                    </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-white truncate">{tx.name}</div>
+                    <div className="text-xs text-gray-500">{tx.relation}</div>
                   </div>
                 </div>
-                <span className={`px-2 py-1 text-xs rounded ${
-                  trade.significance === 'high'
-                    ? 'bg-[#f0b90b]/20 text-[#f0b90b]'
-                    : trade.significance === 'medium'
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : 'bg-gray-500/20 text-gray-400'
-                }`}>
-                  {trade.significance === 'high' ? '🔥 Hoch' : trade.significance === 'medium' ? 'Mittel' : 'Niedrig'}
-                </span>
+                <div className="flex items-center gap-4 shrink-0 text-right text-sm">
+                  <div>
+                    <div className={`font-semibold ${buy ? 'text-emerald-400' : sell ? 'text-red-400' : 'text-gray-400'}`}>
+                      {tx.type}
+                    </div>
+                    <div className="text-xs text-gray-500">{tx.shares?.toLocaleString('de-DE') ?? '—'} Aktien</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-300">{fmt(tx.value)}</div>
+                    <div className="text-xs text-gray-500">{tx.date ?? '—'}</div>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-[#1a1f37] border border-[#252a3d] rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 text-emerald-400" />
-              <span className="text-sm text-gray-400">Käufe (30d)</span>
-            </div>
-            <div className="text-2xl font-bold text-emerald-400">$2.1 Mrd</div>
-            <div className="text-xs text-gray-500">+12% vs Vormonat</div>
-          </div>
-          <div className="bg-[#1a1f37] border border-[#252a3d] rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingDown className="w-4 h-4 text-red-400" />
-              <span className="text-sm text-gray-400">Verkäufe (30d)</span>
-            </div>
-            <div className="text-2xl font-bold text-red-400">$8.4 Mrd</div>
-            <div className="text-xs text-gray-500">-5% vs Vormonat</div>
-          </div>
-          <div className="bg-[#1a1f37] border border-[#252a3d] rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Building className="w-4 h-4 text-[#f0b90b]" />
-              <span className="text-sm text-gray-400">Kauf/Verkauf Ratio</span>
-            </div>
-            <div className="text-2xl font-bold text-red-400">0.25</div>
-            <div className="text-xs text-gray-500">🔴 Mehr Verkäufe</div>
-          </div>
-        </div>
-      </div>
+      )}
+      <p className="text-xs text-gray-500">Quelle: Yahoo Finance · SEC Form 4 Einreichungen</p>
     </div>
   );
 }

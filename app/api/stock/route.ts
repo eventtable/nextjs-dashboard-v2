@@ -100,6 +100,8 @@ export async function GET(req: NextRequest) {
     const chartUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=${chartInterval}&range=${range}`;
     let chartData: { date: string; close: number; volume?: number }[] = [];
     let rsi = 50;
+    let ma50: number | null = null;
+    let ma200: number | null = null;
     let currentPrice = fd.currentPrice?.raw ?? sd.regularMarketPrice?.raw ?? 0;
     let previousClose = sd.regularMarketPreviousClose?.raw ?? 0;
 
@@ -132,6 +134,14 @@ export async function GET(req: NextRequest) {
             rsi = calculateRSI(closes.filter((v): v is number => v !== null && v !== undefined));
           }
 
+          const validCloses = closes.filter((v): v is number => v !== null && v !== undefined);
+          ma50 = validCloses.length >= 50
+            ? validCloses.slice(-50).reduce((sum, v) => sum + v, 0) / 50
+            : null;
+          ma200 = validCloses.length >= 200
+            ? validCloses.slice(-200).reduce((sum, v) => sum + v, 0) / 200
+            : null;
+
           const meta = chartResult.meta;
           if (!currentPrice) currentPrice = meta.regularMarketPrice ?? 0;
           if (!previousClose) previousClose = meta.chartPreviousClose ?? meta.previousClose ?? 0;
@@ -144,10 +154,12 @@ export async function GET(req: NextRequest) {
     const change = currentPrice - previousClose;
     const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
 
-    // Determine trend from 200-day MA
-    const twoHundredDayAvg = ks.twoHundredDayAverageChange?.raw
-      ? currentPrice - ks.twoHundredDayAverageChange.raw
-      : null;
+    // Determine trend from 200-day MA (prefer computed ma200, fall back to Yahoo's field)
+    const twoHundredDayAvg = ma200 ?? (
+      ks.twoHundredDayAverageChange?.raw
+        ? currentPrice - ks.twoHundredDayAverageChange.raw
+        : null
+    );
     const trend: 'up' | 'down' | 'neutral' =
       twoHundredDayAvg
         ? currentPrice > twoHundredDayAvg ? 'up' : 'down'
@@ -219,6 +231,8 @@ export async function GET(req: NextRequest) {
       fiftyTwoWeekLow: sd.fiftyTwoWeekLow?.raw ?? null,
       fiftyDayAverage: sd.fiftyDayAverage?.raw ?? null,
       twoHundredDayAverage: sd.twoHundredDayAverage?.raw ?? null,
+      ma50,
+      ma200,
       trend,
 
       targetMeanPrice: fd.targetMeanPrice?.raw ?? null,

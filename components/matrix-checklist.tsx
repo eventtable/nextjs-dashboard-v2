@@ -37,8 +37,8 @@ export default function MatrixChecklist({ data }: { data: StockData }) {
     },
     {
       label: 'Trend nicht im Abwärtstrend',
-      passed: data?.trend !== 'Abwärtstrend',
-      detail: `Trend: ${data?.trend ?? 'N/A'}`,
+      passed: data?.trend !== 'down',
+      detail: `Trend: ${data?.trend === 'up' ? 'Aufwärtstrend' : data?.trend === 'down' ? 'Abwärtstrend' : 'Seitwärts'}`,
     },
   ];
 

@@ -1,160 +1,110 @@
 'use client';
 
-import { Crown, TrendingUp, TrendingDown, ArrowRight, Wallet } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Building2 } from 'lucide-react';
 
-interface Investor {
+interface InstitutionalHolder {
   name: string;
-  firm: string;
-  portfolioValue: string;
-  topHoldings: string[];
-  performance: number;
-  recentActivity: 'buying' | 'selling' | 'holding';
+  pctHeld: number | null;
+  shares: number | null;
+  value: number | null;
+  reportDate: string | null;
 }
 
-const topInvestors: Investor[] = [
-  {
-    name: 'Warren Buffett',
-    firm: 'Berkshire Hathaway',
-    portfolioValue: '364.2 Mrd $',
-    topHoldings: ['AAPL', 'BAC', 'KO', 'AXP'],
-    performance: 18.5,
-    recentActivity: 'buying',
-  },
-  {
-    name: 'Ray Dalio',
-    firm: 'Bridgewater Associates',
-    portfolioValue: '15.8 Mrd $',
-    topHoldings: ['PG', 'JNJ', 'KO', 'PEP'],
-    performance: 12.3,
-    recentActivity: 'selling',
-  },
-  {
-    name: 'Ken Griffin',
-    firm: 'Citadel',
-    portfolioValue: '58.4 Mrd $',
-    topHoldings: ['NVDA', 'MSFT', 'AAPL', 'META'],
-    performance: 24.1,
-    recentActivity: 'buying',
-  },
-  {
-    name: 'David Tepper',
-    firm: 'Appaloosa Management',
-    portfolioValue: '8.2 Mrd $',
-    topHoldings: ['META', 'AMZN', 'NVDA', 'GOOGL'],
-    performance: 31.2,
-    recentActivity: 'buying',
-  },
-  {
-    name: 'Cathie Wood',
-    firm: 'ARK Invest',
-    portfolioValue: '12.6 Mrd $',
-    topHoldings: ['TSLA', 'RBLX', 'CRSP', 'SQ'],
-    performance: -8.4,
-    recentActivity: 'holding',
-  },
-  {
-    name: 'Bill Ackman',
-    firm: 'Pershing Square',
-    portfolioValue: '18.9 Mrd $',
-    topHoldings: ['Hilton', 'Chipotle', 'Lowes', 'Google'],
-    performance: 15.7,
-    recentActivity: 'holding',
-  },
-];
+interface MajorHolders {
+  insidersPercent: number | null;
+  institutionsPercent: number | null;
+}
 
-export function TopInvestors() {
-  return (
-    <div className="space-y-6">
-      <div className="bg-[#0d1220] border border-[#1a1f37] rounded-xl p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Crown className="w-5 h-5 text-[#f0b90b]" />
-              🏆 Smart Money Champions
-            </h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Top-Performende Investoren & ihre aktuellen Positionen
-            </p>
-          </div>
-          <div className="text-xs text-gray-500">
-            Q4 2025 • 13F Filings
-          </div>
-        </div>
+interface HoldersData {
+  institutionalHolders: InstitutionalHolder[];
+  majorHolders: MajorHolders | null;
+}
 
-        <div className="grid gap-4">
-          {topInvestors.map((investor, index) => (
-            <div
-              key={investor.name}
-              className="group bg-[#1a1f37] border border-[#252a3d] rounded-lg p-4 hover:border-[#f0b90b]/30 transition-all"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-[#0d1220] flex items-center justify-center text-lg font-bold text-[#f0b90b] border border-[#1a1f37]">
-                    {index + 1}
-                  </div>
-                  <div>
-                    <div className="font-semibold">{investor.name}</div>
-                    <div className="text-sm text-gray-400">{investor.firm}</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1 text-emerald-400">
-                    <Wallet className="w-4 h-4" />
-                    <span>{investor.portfolioValue}</span>
-                  </div>
-                  <div className={`text-sm ${investor.performance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {investor.performance >= 0 ? '+' : ''}{investor.performance}% YTD
-                  </div>
-                </div>
-              </div>
+export function TopInvestors({ ticker }: { ticker: string }) {
+  const [data, setData] = useState<HoldersData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-              <div className="mt-4 flex items-center justify-between">
-                <div className="flex gap-2">
-                  {investor.topHoldings.map((holding) => (
-                    <span
-                      key={holding}
-                      className="px-2 py-1 text-xs bg-[#0d1220] text-gray-300 rounded border border-[#252a3d]"
-                    >
-                      {holding}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">Aktivität:</span>
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded ${
-                    investor.recentActivity === 'buying'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : investor.recentActivity === 'selling'
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'bg-gray-500/20 text-gray-400'
-                  }`}>
-                    {investor.recentActivity === 'buying' && <TrendingUp className="w-3 h-3" />}
-                    {investor.recentActivity === 'selling' && <TrendingDown className="w-3 h-3" />}
-                    {investor.recentActivity === 'buying' && 'Kauft'}
-                    {investor.recentActivity === 'selling' && 'Verkauft'}
-                    {investor.recentActivity === 'holding' && 'Hält'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+  useEffect(() => {
+    if (!ticker) return;
+    setLoading(true);
+    setData(null);
+    fetch(`/api/smart-money/holders?ticker=${encodeURIComponent(ticker)}`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [ticker]);
 
-        <div className="mt-4 p-4 bg-[#1a1f37] rounded-lg border border-[#252a3d]">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#f0b90b]/20 flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-4 h-4 text-[#f0b90b]" />
-            </div>
-            <div>
-              <div className="font-medium text-sm">💡 Smart Money Tipp</div>
-              <p className="text-sm text-gray-400 mt-1">
-                Buffett & Tepper haben in Q4 verstärkt Tech-Aktien aufgestockt. 
-                Beobachte besonders AI-Positionen in ihren nächsten 13F-Filings.
-              </p>
-            </div>
-          </div>
-        </div>
+  const fmt = (n: number | null) =>
+    n == null ? '—' : n >= 1e9 ? `$${(n / 1e9).toFixed(1)} Mrd` : n >= 1e6 ? `$${(n / 1e6).toFixed(0)} Mio` : `$${n.toLocaleString('de-DE')}`;
+
+  const fmtShares = (n: number | null) =>
+    n == null ? '—' : n >= 1e6 ? `${(n / 1e6).toFixed(1)} Mio` : n.toLocaleString('de-DE');
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-14 bg-[#1a1f37] rounded-lg animate-pulse" />
+        ))}
       </div>
+    );
+  }
+
+  const holders = data?.institutionalHolders ?? [];
+  const major = data?.majorHolders;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Building2 className="w-5 h-5 text-[#f0b90b]" />
+        <h3 className="font-semibold">Institutionelle Investoren — {ticker}</h3>
+      </div>
+
+      {major && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#1a1f37] rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-[#f0b90b]">{major.institutionsPercent?.toFixed(1) ?? '—'}%</div>
+            <div className="text-xs text-gray-400 mt-1">Institutionen</div>
+          </div>
+          <div className="bg-[#1a1f37] rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-blue-400">{major.insidersPercent?.toFixed(2) ?? '—'}%</div>
+            <div className="text-xs text-gray-400 mt-1">Insider</div>
+          </div>
+        </div>
+      )}
+
+      {holders.length === 0 ? (
+        <div className="text-gray-400 text-sm p-4 bg-[#1a1f37] rounded-lg">
+          Keine institutionellen Daten für {ticker} gefunden.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-gray-400 text-xs border-b border-[#1a1f37]">
+                <th className="text-left py-2 pr-3">Institution</th>
+                <th className="text-right py-2 px-2">% Anteil</th>
+                <th className="text-right py-2 px-2">Aktien</th>
+                <th className="text-right py-2 px-2">Wert</th>
+                <th className="text-right py-2 pl-2">Datum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {holders.slice(0, 10).map((h, i) => (
+                <tr key={i} className="border-b border-[#1a1f37]/50 hover:bg-[#1a1f37]/30">
+                  <td className="py-2.5 pr-3 font-medium text-white">{h.name}</td>
+                  <td className="text-right py-2.5 px-2 text-[#f0b90b] font-medium">{h.pctHeld?.toFixed(2) ?? '—'}%</td>
+                  <td className="text-right py-2.5 px-2 text-gray-300">{fmtShares(h.shares)}</td>
+                  <td className="text-right py-2.5 px-2 text-gray-300">{fmt(h.value)}</td>
+                  <td className="text-right py-2.5 pl-2 text-gray-500 text-xs">{h.reportDate ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-xs text-gray-500">Quelle: Yahoo Finance · 13F Einreichungen bei der SEC</p>
     </div>
   );
 }
