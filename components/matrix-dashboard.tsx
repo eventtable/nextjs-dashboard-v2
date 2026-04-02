@@ -160,7 +160,7 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
       <SharedHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 pb-12">
+      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 pt-24 pb-12">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">

@@ -35,7 +35,7 @@ interface Props {
   onRangeChange: (r: '1y' | '5y') => void;
 }
 
-const W = 900, H = 520, VOL_H = 70;
+const W = 1200, H = 560, VOL_H = 80;
 const PAD = { top: 16, right: 68, bottom: 28, left: 8 };
 
 export default function StockChart({ data, range, onRangeChange }: Props) {
@@ -153,7 +153,7 @@ export default function StockChart({ data, range, onRangeChange }: Props) {
 
       {/* Chart SVG */}
       <div className="relative">
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${totalH}`} className="w-full" style={{ height: '500px' }}
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${totalH}`} className="w-full" style={{ height: '600px' }}
           onMouseMove={handleMouseMove} onMouseLeave={() => setTooltip(null)}>
           <defs>
             <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
