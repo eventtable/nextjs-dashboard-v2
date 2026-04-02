@@ -61,6 +61,7 @@ function runBacktest(strategy: string, ticker: string, years: number, capital: n
 }
 
 interface SearchResult { ticker: string; name: string; sector: string; index: string }
+interface RealPoint { month: string; real: number }
 
 export default function BacktestPage() {
   const [strategy, setStrategy] = useState('ma_cross');
@@ -72,6 +73,10 @@ export default function BacktestPage() {
   const [running, setRunning] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showReal, setShowReal] = useState(true);
+  const [realData, setRealData] = useState<RealPoint[]>([]);
+  const [realReturn, setRealReturn] = useState<number | null>(null);
+  const [realLoading, setRealLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -111,6 +116,21 @@ export default function BacktestPage() {
     if (e.key === 'Escape') setShowDropdown(false);
   };
 
+  const fetchRealData = useCallback(async (t: string, y: number, cap: number) => {
+    setRealLoading(true);
+    setRealData([]);
+    setRealReturn(null);
+    try {
+      const res = await fetch(`/api/backtest-real?ticker=${encodeURIComponent(t)}&years=${y}&capital=${cap}`);
+      if (res.ok) {
+        const json = await res.json();
+        setRealData(json.data ?? []);
+        setRealReturn(json.totalReturn ?? null);
+      }
+    } catch { /* ignore */ }
+    finally { setRealLoading(false); }
+  }, []);
+
   const handleRun = () => {
     const t = (selectedTicker || tickerInput).trim().toUpperCase();
     if (!t) return;
@@ -120,10 +140,20 @@ export default function BacktestPage() {
       setResult(runBacktest(strategy, t, years, capital));
       setRunning(false);
     }, 800);
+    if (showReal) fetchRealData(t, years, capital);
   };
 
   const activeTicker = selectedTicker || tickerInput.trim().toUpperCase();
   const [showExplainer, setShowExplainer] = useState(false);
+
+  // Merge real data into chart data by month key
+  const chartData = result ? (() => {
+    const realMap = new Map(realData.map(r => [r.month, r.real]));
+    return result.data.map(d => ({
+      ...d,
+      real: showReal && realMap.has(d.month) ? realMap.get(d.month) : undefined,
+    }));
+  })() : [];
 
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
@@ -320,14 +350,28 @@ export default function BacktestPage() {
             </div>
           </div>
 
-          <button
-            onClick={handleRun}
-            disabled={running || !tickerInput.trim()}
-            className="mt-4 bg-[#f0b90b] hover:bg-[#d4a017] disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all"
-          >
-            <Play className="w-4 h-4" />
-            {running ? 'Berechne...' : `Backtest starten${activeTicker ? ` – ${activeTicker}` : ''}`}
-          </button>
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={handleRun}
+              disabled={running || !tickerInput.trim()}
+              className="bg-[#f0b90b] hover:bg-[#d4a017] disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all"
+            >
+              <Play className="w-4 h-4" />
+              {running ? 'Berechne...' : `Backtest starten${activeTicker ? ` – ${activeTicker}` : ''}`}
+            </button>
+            <button
+              onClick={() => setShowReal(v => !v)}
+              title="Echte historische Kursentwicklung der Aktie als Vergleichslinie"
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-semibold transition-all ${
+                showReal
+                  ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10'
+                  : 'border-[#2a2f47] text-gray-500 hover:text-white'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              Echte Kursentwicklung {showReal ? 'an' : 'aus'}
+            </button>
+          </div>
         </div>
 
         {/* Results */}
@@ -349,22 +393,57 @@ export default function BacktestPage() {
               ))}
             </div>
 
+            {/* Real data KPI banner */}
+            {showReal && (realLoading || realReturn !== null) && (
+              <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border text-sm ${
+                realReturn !== null && realReturn > result.totalReturn
+                  ? 'border-emerald-500/30 bg-emerald-500/5'
+                  : 'border-[#2a2f47] bg-[#1a1f37]/50'
+              }`}>
+                <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-gray-400">Echtes Buy &amp; Hold ({activeTicker}):</span>
+                {realLoading
+                  ? <span className="text-gray-500 text-xs">Lade Kursdaten…</span>
+                  : <span className={`font-bold ${realReturn! > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {realReturn! > 0 ? '+' : ''}{realReturn!.toFixed(1)}%
+                    </span>
+                }
+                {!realLoading && realReturn !== null && (
+                  <span className="text-xs text-gray-500 ml-auto">
+                    {realReturn > result.totalReturn
+                      ? `▲ Einfaches Halten wäre +${(realReturn - result.totalReturn).toFixed(1)}% besser gewesen`
+                      : `▼ Strategie hat echte Entwicklung um ${(result.totalReturn - realReturn).toFixed(1)}% übertroffen`}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="glass-card rounded-xl p-6 border border-[#1a1f37]">
               <h3 className="font-semibold text-white mb-1">Portfolio-Entwicklung vs. Benchmark</h3>
               <p className="text-xs text-gray-500 mb-4">{activeTicker} · {STRATEGIES.find(s => s.id === strategy)?.label} · {years} Jahr{years > 1 ? 'e' : ''}</p>
-              <div className="h-72">
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={result.data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1a1f37" />
                     <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 11 }} tickCount={6} />
                     <YAxis tick={{ fill: '#6b7280', fontSize: 11 }} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />
                     <Tooltip
                       contentStyle={{ background: '#0f1629', border: '1px solid #1a1f37', borderRadius: '8px' }}
-                      formatter={(v: number, n: string) => [`€${v.toLocaleString('de-DE')}`, n === 'portfolio' ? 'Strategie' : 'Benchmark']}
+                      formatter={(v: number, n: string) => [
+                        `€${v.toLocaleString('de-DE')}`,
+                        n === 'portfolio' ? 'Strategie (sim.)' : n === 'real' ? `Buy & Hold – ${activeTicker} (echt)` : 'Benchmark (SPY, sim.)'
+                      ]}
                     />
-                    <Legend formatter={v => v === 'portfolio' ? 'Strategie' : 'Benchmark (SPY)'} />
+                    <Legend formatter={v =>
+                      v === 'portfolio' ? 'Strategie (simuliert)' :
+                      v === 'real'      ? `Buy & Hold – ${activeTicker} (echte Kurse)` :
+                      'Benchmark SPY (simuliert)'
+                    } />
                     <Line type="monotone" dataKey="portfolio" stroke="#f0b90b" strokeWidth={2} dot={false} />
                     <Line type="monotone" dataKey="benchmark" stroke="#60B5FF" strokeWidth={1.5} dot={false} strokeDasharray="5 5" />
+                    {showReal && realData.length > 0 && (
+                      <Line type="monotone" dataKey="real" stroke="#22c55e" strokeWidth={2} dot={false} strokeDasharray="3 2" />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
