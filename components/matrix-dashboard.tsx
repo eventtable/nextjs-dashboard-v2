@@ -252,6 +252,33 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
           </div>
         )}
 
+        {/* Section Tab Navigation — only shown when stock data loaded */}
+        {stockData && !loading && (
+          <div className="flex flex-wrap gap-1.5 mb-6 p-1 bg-[#0f1525] rounded-xl border border-[#1a1f37]">
+            {[
+              { id: 'uebersicht',  label: 'Übersicht',   icon: BarChart3   },
+              { id: 'analyse',     label: 'Analyse',      icon: TrendingUp  },
+              { id: 'dividenden',  label: 'Dividenden',   icon: Clock       },
+              { id: 'peers',       label: 'Aktienpaare',  icon: Users       },
+              { id: 'checkliste',  label: 'Checkliste',   icon: CheckSquare },
+              { id: 'blackswan',   label: 'Black Swan',   icon: Shield      },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveSection(id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all flex-1 min-w-fit justify-center ${
+                  activeSection === id
+                    ? 'bg-[#f0b90b] text-black shadow-md'
+                    : 'text-gray-400 hover:text-white hover:bg-[#1a1f37]'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Dashboard Content */}
         {stockData && !loading && (
           <div className="space-y-6">

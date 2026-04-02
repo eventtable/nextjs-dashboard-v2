@@ -110,19 +110,26 @@ export async function GET(req: NextRequest) {
         const chartResult = chartJson?.chart?.result?.[0];
         if (chartResult) {
           const timestamps: number[] = chartResult.timestamp || [];
-          const closes: number[] = chartResult.indicators?.quote?.[0]?.close || [];
-          const volumes: number[] = chartResult.indicators?.quote?.[0]?.volume || [];
+          const q0 = chartResult.indicators?.quote?.[0] || {};
+          const opens:   (number|null)[] = q0.open   || [];
+          const highs:   (number|null)[] = q0.high   || [];
+          const lows:    (number|null)[] = q0.low    || [];
+          const closes:  (number|null)[] = q0.close  || [];
+          const volumes: (number|null)[] = q0.volume || [];
 
           chartData = timestamps
             .map((ts, i) => ({
               date: new Date(ts * 1000).toISOString().split('T')[0],
-              close: closes[i] ?? null,
+              open:   opens[i]   ?? null,
+              high:   highs[i]   ?? null,
+              low:    lows[i]    ?? null,
+              close:  closes[i]  ?? null,
               volume: volumes[i] ?? undefined,
             }))
-            .filter((d) => d.close !== null) as { date: string; close: number; volume?: number }[];
+            .filter((d) => d.close !== null) as { date: string; open?: number | null; high?: number | null; low?: number | null; close: number; volume?: number }[];
 
           if (closes.filter(Boolean).length >= 15) {
-            rsi = calculateRSI(closes.filter(Boolean));
+            rsi = calculateRSI(closes.filter((v): v is number => v !== null && v !== undefined));
           }
 
           const meta = chartResult.meta;

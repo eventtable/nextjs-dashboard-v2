@@ -85,5 +85,5 @@ export interface StockData {
   numberOfAnalystOpinions?: number | null;
 
   // Chart
-  chartData?: { date: string; close: number; volume?: number }[];
+  chartData?: { date: string; open?: number | null; high?: number | null; low?: number | null; close: number; volume?: number }[];
 }
