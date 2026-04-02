@@ -10,7 +10,7 @@ export default function AdminInvitesPage() {
   const [loading, setLoading]   = useState(true);
   const [creating, setCreating] = useState(false);
   const [maxUses, setMaxUses]   = useState(1);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [newLink, setNewLink]   = useState<string | null>(null);
   const [error, setError]       = useState<string | null>(null);
@@ -67,7 +67,7 @@ export default function AdminInvitesPage() {
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
       <SharedHeader />
-      <main className="lg:ml-64 p-4 lg:p-6 pt-20 lg:pt-6">
+      <main className="p-4 lg:p-6 pt-20">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="text-gray-400 hover:text-white transition-colors">

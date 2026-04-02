@@ -38,7 +38,7 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
       <SharedHeader />
-      <main className="lg:ml-64 p-4 lg:p-6 pt-20 lg:pt-6">
+      <main className="p-4 lg:p-6 pt-20">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="text-gray-400 hover:text-white transition-colors">

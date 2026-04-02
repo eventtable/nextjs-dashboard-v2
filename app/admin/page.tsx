@@ -12,7 +12,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
       <SharedHeader />
-      <main className="lg:ml-64 p-4 lg:p-6 pt-20 lg:pt-6">
+      <main className="p-4 lg:p-6 pt-20">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Activity className="w-7 h-7 text-[#f0b90b]" />
