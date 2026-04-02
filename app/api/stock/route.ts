@@ -38,24 +38,62 @@ export async function GET(req: NextRequest) {
       summaryRes = await fetch(retryUrl, { headers: yahooHeaders(fresh.cookie) });
     }
 
-    if (!summaryRes.ok) {
-      const errText = await summaryRes.text();
-      console.error('Yahoo summary error:', summaryRes.status, errText.slice(0, 200));
-      return NextResponse.json({ error: `Yahoo Finance: ${summaryRes.status}` }, { status: 502 });
+    // On 404/422: fall back to v7/quote for basic price data (international stocks)
+    let sd: any = {}, fd: any = {}, ks: any = {}, ap: any = {}, ce: any = {};
+
+    if (summaryRes.status === 404 || summaryRes.status === 422) {
+      const quoteUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}&crumb=${encodeURIComponent(crumb)}`;
+      const quoteRes = await fetch(quoteUrl, { headers: yahooHeaders(cookie), signal: AbortSignal.timeout(6000) });
+      if (!quoteRes.ok) {
+        return NextResponse.json({ error: `Yahoo Finance: ${summaryRes.status}` }, { status: 502 });
+      }
+      const quoteJson = await quoteRes.json();
+      const q = quoteJson?.quoteResponse?.result?.[0];
+      if (!q) return NextResponse.json({ error: 'Aktie nicht gefunden' }, { status: 404 });
+
+      sd = {
+        currency: q.currency,
+        regularMarketPrice: { raw: q.regularMarketPrice },
+        regularMarketPreviousClose: { raw: q.regularMarketPreviousClose },
+        open: { raw: q.regularMarketOpen },
+        dayHigh: { raw: q.regularMarketDayHigh },
+        dayLow: { raw: q.regularMarketDayLow },
+        volume: { raw: q.regularMarketVolume },
+        averageVolume: { raw: q.averageDailyVolume3Month },
+        marketCap: { raw: q.marketCap },
+        trailingPE: { raw: q.trailingPE },
+        forwardPE: { raw: q.forwardPE },
+        beta: { raw: q.beta },
+        fiftyTwoWeekHigh: { raw: q.fiftyTwoWeekHigh },
+        fiftyTwoWeekLow: { raw: q.fiftyTwoWeekLow },
+        fiftyDayAverage: { raw: q.fiftyDayAverage },
+        twoHundredDayAverage: { raw: q.twoHundredDayAverage },
+        dividendYield: { raw: q.trailingAnnualDividendYield || 0 },
+        trailingAnnualDividendYield: { raw: q.trailingAnnualDividendYield },
+        trailingAnnualDividendRate: { raw: q.trailingAnnualDividendRate },
+      };
+      ap = { longName: q.longName, shortName: q.shortName, sector: q.sector || '', country: q.country || '' };
+      ks = { shortName: { raw: q.shortName }, exchange: { raw: q.fullExchangeName } };
+    } else {
+      if (!summaryRes.ok) {
+        const errText = await summaryRes.text();
+        console.error('Yahoo summary error:', summaryRes.status, errText.slice(0, 200));
+        return NextResponse.json({ error: `Yahoo Finance: ${summaryRes.status}` }, { status: 502 });
+      }
+
+      const summaryJson = await summaryRes.json();
+      const result = summaryJson?.quoteSummary?.result?.[0];
+
+      if (!result) {
+        return NextResponse.json({ error: 'Aktie nicht gefunden' }, { status: 404 });
+      }
+
+      sd = result.summaryDetail || {};
+      fd = result.financialData || {};
+      ks = result.defaultKeyStatistics || {};
+      ap = result.assetProfile || {};
+      ce = result.calendarEvents || {};
     }
-
-    const summaryJson = await summaryRes.json();
-    const result = summaryJson?.quoteSummary?.result?.[0];
-
-    if (!result) {
-      return NextResponse.json({ error: 'Aktie nicht gefunden' }, { status: 404 });
-    }
-
-    const sd = result.summaryDetail || {};
-    const fd = result.financialData || {};
-    const ks = result.defaultKeyStatistics || {};
-    const ap = result.assetProfile || {};
-    const ce = result.calendarEvents || {};
 
     // Fetch chart data for RSI + historical prices
     const chartInterval = range === '5y' ? '1wk' : '1d';
