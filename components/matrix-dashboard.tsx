@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Search, TrendingUp, BarChart3, Shield, Users, Clock, RotateCcw, CheckSquare, AlertTriangle, Activity, Zap } from 'lucide-react';
+import { Search, TrendingUp, BarChart3, Shield, Users, Clock, RotateCcw, CheckSquare, AlertTriangle, Activity, Zap, LineChart } from 'lucide-react';
 import type { StockData } from '@/lib/types';
 import SharedHeader from './shared-header';
 import StockOverview from './stock-overview';
@@ -256,12 +256,12 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
         {stockData && !loading && (
           <div className="flex flex-wrap gap-1.5 mb-6 p-1 bg-[#0f1525] rounded-xl border border-[#1a1f37]">
             {[
-              { id: 'uebersicht',  label: 'Übersicht',   icon: BarChart3   },
-              { id: 'analyse',     label: 'Analyse',      icon: TrendingUp  },
-              { id: 'dividenden',  label: 'Dividenden',   icon: Clock       },
-              { id: 'peers',       label: 'Aktienpaare',  icon: Users       },
-              { id: 'checkliste',  label: 'Checkliste',   icon: CheckSquare },
-              { id: 'blackswan',   label: 'Black Swan',   icon: Shield      },
+              { id: 'uebersicht',   label: 'Übersicht',    icon: BarChart3   },
+              { id: 'fundamental',  label: 'Fundamental',  icon: TrendingUp  },
+              { id: 'technisch',    label: 'Technisch',    icon: LineChart   },
+              { id: 'peers',        label: 'Aktienpaare',  icon: Users       },
+              { id: 'dividenden',   label: 'Dividenden',   icon: Clock       },
+              { id: 'checkliste',   label: 'Checkliste',   icon: CheckSquare },
             ].map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -290,24 +290,25 @@ export default function MatrixDashboard({ initialTicker = '' }: { initialTicker?
                 <StockChart data={stockData} range={chartRange} onRangeChange={handleRangeChange} />
               </>
             )}
-            {activeSection === 'analyse' && (
+            {activeSection === 'fundamental' && (
               <>
                 <MatrixAmpel data={stockData} />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <FundamentalAnalysis data={stockData} />
-                  <TechnicalAnalysis data={stockData} />
-                </div>
+                <FundamentalAnalysis data={stockData} />
                 <MarketEnvironment data={stockData} />
               </>
             )}
-            {activeSection === 'dividenden' && (
-              <DividendAnalysis data={stockData} />
+            {activeSection === 'technisch' && (
+              <>
+                <StockChart data={stockData} range={chartRange} onRangeChange={handleRangeChange} />
+                <TechnicalAnalysis data={stockData} />
+                <EarlyWarnings data={stockData} />
+              </>
             )}
             {activeSection === 'peers' && (
               <PeerComparison currentTicker={stockData?.ticker ?? ''} onAnalyze={(t: string) => { setTicker(t); fetchStock(t); }} />
             )}
-            {activeSection === 'blackswan' && (
-              <BlackSwanSimulation data={stockData} />
+            {activeSection === 'dividenden' && (
+              <DividendAnalysis data={stockData} />
             )}
             {activeSection === 'checkliste' && (
               <MatrixChecklist data={stockData} />
