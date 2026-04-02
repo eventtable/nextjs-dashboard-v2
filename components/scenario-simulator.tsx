@@ -108,14 +108,18 @@ export default function ScenarioSimulator({ positions, totalValue }: ScenarioSim
   };
   
   return (
-    <div className="space-y-4">
+    <div className="glass-card rounded-xl p-4 space-y-4">
+      <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+        <Shield className="w-4 h-4 text-[#f0b90b]" />
+        Szenario-Simulator
+      </h3>
       {/* Tabs */}
       <div className="flex gap-2">
         <button
           onClick={() => setActiveTab('preset')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'preset' 
-              ? 'bg-[#f0b90b] text-black' 
+          className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'preset'
+              ? 'bg-[#f0b90b] text-black'
               : 'bg-white/5 text-gray-400 hover:bg-white/10'
           }`}
         >
@@ -123,9 +127,9 @@ export default function ScenarioSimulator({ positions, totalValue }: ScenarioSim
         </button>
         <button
           onClick={() => setActiveTab('custom')}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'custom' 
-              ? 'bg-[#f0b90b] text-black' 
+          className={`flex-1 py-1.5 px-3 rounded-lg text-sm font-medium transition-all ${
+            activeTab === 'custom'
+              ? 'bg-[#f0b90b] text-black'
               : 'bg-white/5 text-gray-400 hover:bg-white/10'
           }`}
         >
@@ -135,47 +139,50 @@ export default function ScenarioSimulator({ positions, totalValue }: ScenarioSim
       
       {/* Preset Scenarios */}
       {activeTab === 'preset' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-          {riskScenarios.map((scenario) => (
-            <motion.button
-              key={scenario.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                setSelectedScenarioId(scenario.id);
-                runSimulation();
-              }}
-              className={`p-3 rounded-lg border text-left transition-all ${
-                selectedScenarioId === scenario.id
-                  ? 'border-[#f0b90b] bg-[#f0b90b]/10'
-                  : 'border-white/10 bg-white/5 hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#f0b90b]">{getCategoryIcon(scenario.category)}</span>
-                  <span className="text-sm font-medium text-white">{scenario.name}</span>
+        <div className="grid grid-cols-1 gap-1.5">
+          {riskScenarios.map((scenario) => {
+            const isSelected = selectedScenarioId === scenario.id;
+            return (
+              <motion.button
+                key={scenario.id}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setSelectedScenarioId(scenario.id);
+                  runSimulation();
+                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
+                  isSelected
+                    ? 'border-[#f0b90b] bg-[#f0b90b]/10'
+                    : 'border-white/10 bg-white/5 hover:border-white/25 hover:bg-white/8'
+                }`}
+              >
+                <span className={`shrink-0 ${isSelected ? 'text-[#f0b90b]' : 'text-gray-500'}`}>
+                  {getCategoryIcon(scenario.category)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-white truncate">{scenario.name}</span>
+                    <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border ${probabilityColors[scenario.probability]}`}>
+                      {scenario.probability === 'low' ? '↓ low' : scenario.probability === 'high' ? '↑ high' : '→ med'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-xs font-semibold ${impactColors[scenario.impact]}`}>
+                      {scenario.estimatedImpact > 0 ? '+' : ''}{scenario.estimatedImpact}%
+                    </span>
+                    <span className="text-[10px] text-gray-500">{scenario.timeframe}</span>
+                  </div>
                 </div>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${probabilityColors[scenario.probability]}`}>
-                  {scenario.probability === 'low' ? '↓' : scenario.probability === 'high' ? '↑' : '→'} {scenario.probability}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1 line-clamp-2">{scenario.description}</p>
-              <div className="flex items-center gap-3 mt-2">
-                <span className={`text-xs font-medium ${impactColors[scenario.impact]}`}>
-                  Impact: {scenario.estimatedImpact > 0 ? '+' : ''}{scenario.estimatedImpact}%
-                </span>
-                <span className="text-xs text-gray-500">•</span>
-                <span className="text-xs text-gray-500">{scenario.timeframe}</span>
-              </div>
-            </motion.button>
-          ))}
+                {isSelected && <span className="shrink-0 text-[#f0b90b] text-xs">▶</span>}
+              </motion.button>
+            );
+          })}
         </div>
       )}
       
       {/* Custom Scenario */}
       {activeTab === 'custom' && (
-        <div className="glass-card p-4 rounded-xl">
+        <div className="rounded-xl border border-white/10 p-4">
           <h4 className="text-sm font-medium text-white mb-3">Manueller Impact-Test</h4>
           
           <div className="mb-4">
@@ -349,10 +356,10 @@ export default function ScenarioSimulator({ positions, totalValue }: ScenarioSim
       </AnimatePresence>
       
       {!simulationResult && (
-        <div className="glass-card rounded-xl p-6 text-center">
-          <AlertTriangle className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-          <p className="text-sm text-gray-400">
-            Wähle ein Szenario oder erstelle ein eigenes, um die Auswirkungen auf dein Depot zu simulieren.
+        <div className="rounded-xl p-4 text-center border border-white/10">
+          <AlertTriangle className="w-6 h-6 text-gray-600 mx-auto mb-1.5" />
+          <p className="text-xs text-gray-500">
+            Szenario wählen, um Depot-Auswirkungen zu simulieren.
           </p>
         </div>
       )}

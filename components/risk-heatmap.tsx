@@ -111,122 +111,86 @@ export default function RiskHeatmap({ positions, totalValue }: RiskHeatmapProps)
   
   return (
     <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="glass-card p-3 rounded-lg">
-          <p className="text-xs text-gray-400">Ø Risiko-Score</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`text-lg font-bold ${
-              avgRiskScore >= 50 ? 'text-red-400' : 
-              avgRiskScore >= 35 ? 'text-orange-400' : 
-              avgRiskScore >= 20 ? 'text-yellow-400' : 'text-green-400'
-            }`}>
-              {avgRiskScore.toFixed(1)}
-            </span>
-            <span className="text-xs text-gray-500">/100</span>
-          </div>
-        </div>
-        
-        <div className="glass-card p-3 rounded-lg">
-          <p className="text-xs text-gray-400">High Risk Positionen</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`text-lg font-bold ${highRiskCount > 5 ? 'text-red-400' : 'text-orange-400'}`}>
-              {highRiskCount}
-            </span>
-            <span className="text-xs text-gray-500">/ {positions.length}</span>
-          </div>
-        </div>
-        
-        <div className="glass-card p-3 rounded-lg">
-          <p className="text-xs text-gray-400">Höchstes Risiko</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm font-bold text-red-400 truncate">
-              {positionRisks[0]?.position.ticker}
-            </span>
-          </div>
-        </div>
-        
-        <div className="glass-card p-3 rounded-lg">
-          <p className="text-xs text-gray-400">Szenario-Exposure</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-lg font-bold text-[#f0b90b]">
-              {riskScenarios.length}
-            </span>
-            <span className="text-xs text-gray-500">Szenarien</span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Heatmap Grid */}
+      {/* Heatmap Card with inline stats */}
       <div className="glass-card rounded-xl p-4">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-[#f0b90b]" />
             Depot-Risiko Heatmap
           </h3>
-          <div className="flex items-center gap-3 text-xs">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              Niedrig
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-              Mittel
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-              Hoch
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-              Kritisch
-            </span>
+          <div className="flex items-center gap-2 text-[11px] text-gray-400">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>Niedrig</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500 inline-block"></span>Mittel</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500 inline-block"></span>Hoch</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>Kritisch</span>
           </div>
         </div>
-        
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+
+        {/* Mini stat bar */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="bg-[#0d1117] rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[10px] text-gray-500">Ø Score</p>
+            <p className={`text-sm font-bold ${avgRiskScore >= 50 ? 'text-red-400' : avgRiskScore >= 35 ? 'text-orange-400' : avgRiskScore >= 20 ? 'text-yellow-400' : 'text-green-400'}`}>
+              {avgRiskScore.toFixed(1)}
+            </p>
+          </div>
+          <div className="bg-[#0d1117] rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[10px] text-gray-500">High Risk</p>
+            <p className={`text-sm font-bold ${highRiskCount > 5 ? 'text-red-400' : 'text-orange-400'}`}>
+              {highRiskCount}<span className="text-gray-500 font-normal text-[10px]">/{positions.length}</span>
+            </p>
+          </div>
+          <div className="bg-[#0d1117] rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[10px] text-gray-500">Höchstes</p>
+            <p className="text-sm font-bold text-red-400 truncate">
+              {positionRisks[0]?.position.ticker.replace('.DE','').replace('.PA','').replace('.L','')}
+            </p>
+          </div>
+          <div className="bg-[#0d1117] rounded-lg px-2 py-1.5 text-center">
+            <p className="text-[10px] text-gray-500">Szenarien</p>
+            <p className="text-sm font-bold text-[#f0b90b]">{riskScenarios.length}</p>
+          </div>
+        </div>
+
+        {/* Compact heatmap grid */}
+        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
           {positionRisks.map((risk, index) => {
             const colors = riskColors[risk.riskLevel];
-            const isHovered = hoveredPosition === risk.position.id;
             const isSelected = selectedPosition?.position.id === risk.position.id;
-            
+            const shortTicker = risk.position.ticker.replace(/\.(DE|PA|CO|L|US)$/, '');
+
             return (
               <motion.button
                 key={risk.position.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.03 }}
-                onClick={() => setSelectedPosition(risk)}
+                onClick={() => setSelectedPosition(isSelected ? null : risk)}
                 onMouseEnter={() => setHoveredPosition(risk.position.id)}
                 onMouseLeave={() => setHoveredPosition(null)}
+                title={`${risk.position.name} — Score ${risk.riskScore.toFixed(0)}`}
                 className={`
-                  relative aspect-square rounded-lg border-2 transition-all duration-200
-                  ${colors.bg} ${colors.border} ${colors.glow}
-                  ${isHovered || isSelected ? 'scale-110 shadow-lg z-10' : 'hover:scale-105'}
+                  relative h-11 rounded-md border transition-all duration-150 flex flex-col items-center justify-center gap-0.5
+                  ${colors.bg} ${isSelected ? colors.border.replace('/40','') : colors.border}
+                  ${isSelected ? 'ring-1 ring-white/40 scale-105' : 'hover:scale-105 hover:brightness-125'}
                 `}
               >
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-1">
-                  <span className="text-[10px] font-bold text-white truncate w-full text-center">
-                    {risk.position.ticker.replace('.DE', '').replace('.CO', '').replace('.L', '')}
-                  </span>
-                  <span className={`text-[8px] ${colors.text} mt-0.5`}>
-                    {risk.riskScore.toFixed(0)}
-                  </span>
-                </div>
-                
-                {/* Risk indicators */}
+                <span className="text-[9px] font-bold text-white leading-none truncate px-0.5 max-w-full">
+                  {shortTicker}
+                </span>
+                <span className={`text-[9px] font-semibold ${colors.text} leading-none`}>
+                  {risk.riskScore.toFixed(0)}
+                </span>
                 {risk.riskLevel === 'severe' && (
                   <div className="absolute top-0.5 right-0.5">
-                    <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
+                    <AlertTriangle className="w-2 h-2 text-red-400" />
                   </div>
-                )}
-                {risk.affectedScenarios >= 4 && (
-                  <div className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-[#f0b90b]" />
                 )}
               </motion.button>
             );
           })}
         </div>
+        <p className="text-[10px] text-gray-500 mt-2">Klick auf Kachel = Details</p>
       </div>
       
       {/* Selected Position Details */}

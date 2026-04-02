@@ -16,7 +16,7 @@ export default function RisikoPage() {
           <h1 className="text-2xl font-bold text-white">Risiko-Analyse</h1>
           <p className="text-gray-400 text-sm mt-1">Portfolio-Risiken · Szenarien · Heatmap</p>
         </div>
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[44%_56%] gap-6 items-start">
           <RiskHeatmap positions={depotPositionen} totalValue={totalValue} />
           <ScenarioSimulator positions={depotPositionen} totalValue={totalValue} />
         </div>
