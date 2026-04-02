@@ -50,6 +50,7 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'positionen' | 'allokation' | 'balancing' | 'verlauf'>('positionen');
   const [chartData, setChartData] = useState<{ date: string; value: number }[]>([]);
+  const [chartDivs, setChartDivs] = useState(0);
   const [chartLoading, setChartLoading] = useState(false);
 
   const goToMatrix = useCallback((ticker: string) => {
@@ -65,6 +66,7 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
       const res = await fetch('/api/depot-chart');
       const json = await res.json();
       setChartData(json.chartData ?? []);
+      setChartDivs(json.expectedAnnualDividends ?? 0);
     } catch { /* ignore */ }
     finally { setChartLoading(false); }
   }, [chartData.length]);
@@ -437,60 +439,95 @@ export default function DepotOverview({ onAnalyze }: { onAnalyze?: (ticker: stri
       {/* Tab: Verlauf */}
       {activeTab === 'verlauf' && (
         <div className="glass-card rounded-xl p-5">
-          <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-            <LineChartIcon className="w-4 h-4 text-[#f0b90b]" />
-            Depot-Entwicklung (6 Monate)
-          </h3>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <LineChartIcon className="w-4 h-4 text-[#f0b90b]" />
+                Portfolio-Entwicklung YTD
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Aktuelle Positionen · Kursverlauf seit 01.01.{new Date().getFullYear()}
+              </p>
+            </div>
+            {chartDivs > 0 && (
+              <div className="text-right">
+                <p className="text-[10px] text-gray-500">Erw. Jahres-Dividende</p>
+                <p className="text-sm font-semibold text-emerald-400">+{formatEur(chartDivs)}</p>
+              </div>
+            )}
+          </div>
           {chartLoading ? (
             <div className="h-72 flex items-center justify-center text-gray-400">
               <RefreshCw className="w-6 h-6 animate-spin mr-2" /> Lade Kursdaten…
             </div>
           ) : chartData.length === 0 ? (
             <div className="h-72 flex items-center justify-center text-gray-500 text-sm">Keine Verlaufsdaten verfügbar</div>
-          ) : (
-            <>
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="depotGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f0b90b" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#f0b90b" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1a1f37" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 10, fill: '#6b7280' }}
-                      tickFormatter={(d) => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
-                      interval={Math.floor(chartData.length / 6)}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 10, fill: '#6b7280' }}
-                      tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
-                      width={45}
-                    />
-                    <Tooltip
-                      contentStyle={{ background: '#1a1f37', border: '1px solid #2a2f47', borderRadius: 8, fontSize: 12, color: '#fff' }}
-                      formatter={(v: number) => [formatEur(v), 'Depotwert']}
-                      labelFormatter={(d) => new Date(d).toLocaleDateString('de-DE')}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#f0b90b"
-                      strokeWidth={2}
-                      fill="url(#depotGrad)"
-                      dot={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="text-[10px] text-gray-600 mt-3">
-                Historische Kurse via Yahoo Finance · Näherungswerte basierend auf aktuellem EUR-Kurs
-              </p>
-            </>
-          )}
+          ) : (() => {
+            const first = chartData[0]?.value ?? 0;
+            const last = chartData[chartData.length - 1]?.value ?? 0;
+            const ytdChange = first > 0 ? ((last - first) / first) * 100 : 0;
+            const ytdEur = last - first;
+            return (
+              <>
+                <div className="flex gap-4 mb-3">
+                  <div>
+                    <span className="text-xs text-gray-500">Start 01.01.</span>
+                    <span className="text-sm font-medium text-white ml-2">{formatEur(first)}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500">Heute</span>
+                    <span className="text-sm font-medium text-white ml-2">{formatEur(last)}</span>
+                  </div>
+                  <div>
+                    <span className={`text-sm font-bold ${ytdChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {ytdChange >= 0 ? '+' : ''}{ytdChange.toFixed(1)}% ({ytdEur >= 0 ? '+' : ''}{formatEur(ytdEur)})
+                    </span>
+                  </div>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="depotGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f0b90b" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#f0b90b" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1a1f37" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 10, fill: '#6b7280' }}
+                        tickFormatter={(d) => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' })}
+                        interval={Math.floor(chartData.length / 6)}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: '#6b7280' }}
+                        tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
+                        width={45}
+                        domain={['auto', 'auto']}
+                      />
+                      <Tooltip
+                        contentStyle={{ background: '#1a1f37', border: '1px solid #2a2f47', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                        formatter={(v: number) => [formatEur(v), 'Depotwert']}
+                        labelFormatter={(d) => new Date(d).toLocaleDateString('de-DE')}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#f0b90b"
+                        strokeWidth={2}
+                        fill="url(#depotGrad)"
+                        dot={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] text-gray-600 mt-2">
+                  Simulation: aktuelle Positionen rückwirkend auf Jahresanfang. Kurse: Yahoo Finance. Reale Käufe/Verkäufe nicht berücksichtigt.
+                </p>
+              </>
+            );
+          })()}
         </div>
       )}
 
