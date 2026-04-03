@@ -24,35 +24,88 @@ const PROFILE_LABELS: Record<Profile, string> = {
   position: 'Position',
 };
 
+const PROFILE_INFO: Record<Profile, { title: string; horizon: string; desc: string; indicators: string; action: string }> = {
+  momentum: {
+    title: 'Momentum-Trading',
+    horizon: '1–5 Tage',
+    desc: 'Nutzt kurzfristige Kursdynamik. Du handelst die Kraft einer Bewegung — wenn etwas stark steigt, steigt es oft weiter.',
+    indicators: 'RSI (Überkauft/Überverkauft) · MACD-Histogramm · Volumen-Spike · Bollinger Bänder · Stochastik',
+    action: 'Ziel 1 erreicht → Hälfte verkaufen, Rest mit Trailing-Stop laufen lassen. Ziel 2 → Vollständig aussteigen. Stop-Loss wird IMMER gesetzt — kein Trade ohne Absicherung.',
+  },
+  swing: {
+    title: 'Swing-Trading',
+    horizon: '1–8 Wochen',
+    desc: 'Handelt Kursschwingungen zwischen Unterstützung und Widerstand. Ideal für Berufstätige — kein tägliches Monitoring nötig.',
+    indicators: 'EMA9/EMA21 Crossover · Fibonacci-Retracement · Supertrend · CCI · 52-Wochen-Hochs/Tiefs',
+    action: 'Ziel 1 erreicht → ⅓ Gewinn mitnehmen, Stop-Loss auf Einstieg ziehen (Break-Even). Ziel 2 → ⅓ weitere Gewinne. Rest läuft mit engem Trailing-Stop.',
+  },
+  position: {
+    title: 'Positionstrading',
+    horizon: '3–12 Monate',
+    desc: 'Setzt auf den übergeordneten Trend. Wenige, qualitativ hochwertige Signale. Ideal für Buy-and-Hold mit technischem Timing.',
+    indicators: 'EMA50/EMA200 (Golden/Death Cross) · Supertrend · ADX (Trendstärke) · Wöchentliche MACD',
+    action: 'Ziel 1 erreicht → Position halten, Stop-Loss nachziehen. Erst verkaufen wenn EMA50 unter EMA200 fällt (Death Cross) oder Supertrend dreht.',
+  },
+};
+
+const SIGNAL_GUIDE = [
+  { signal: 'long', label: 'LONG', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/30', desc: 'Starkes Kaufsignal — Score > +4. Alle Indikatoren bullisch ausgerichtet.' },
+  { signal: 'watch', label: 'BEOBACHTEN', color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/30', desc: 'Schwaches Signal — Score ±1.5 bis ±4. Warten auf Bestätigung, noch nicht handeln.' },
+  { signal: 'hold', label: 'HALTEN', color: 'text-gray-400', bg: 'bg-gray-400/10 border-gray-400/30', desc: 'Neutral — Score < ±1.5. Kein klares Signal. Offene Positionen halten, keine neuen eingehen.' },
+  { signal: 'short', label: 'SHORT', color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/30', desc: 'Verkaufs-/Leerverkaufssignal — Score < −4. Bestehende Positionen reduzieren oder absichern.' },
+];
+
 const SIGNAL_COLORS: Record<string, string> = {
-  long: 'text-green-400',
-  STRONG_BUY: 'text-green-300',
-  BUY: 'text-green-400',
-  short: 'text-red-400',
-  STRONG_SELL: 'text-red-300',
-  SELL: 'text-red-400',
-  hold: 'text-yellow-400',
-  watch: 'text-yellow-400',
-  NEUTRAL: 'text-gray-400',
+  long: 'text-green-400', STRONG_BUY: 'text-green-300', BUY: 'text-green-400',
+  short: 'text-red-400', STRONG_SELL: 'text-red-300', SELL: 'text-red-400',
+  hold: 'text-gray-400', watch: 'text-yellow-400', NEUTRAL: 'text-gray-400',
 };
 
 const SIGNAL_BG: Record<string, string> = {
-  long: 'bg-green-400/10 border-green-400/30',
-  STRONG_BUY: 'bg-green-400/10 border-green-400/30',
-  BUY: 'bg-green-400/10 border-green-400/30',
-  short: 'bg-red-400/10 border-red-400/30',
-  STRONG_SELL: 'bg-red-400/10 border-red-400/30',
-  SELL: 'bg-red-400/10 border-red-400/30',
-  hold: 'bg-yellow-400/10 border-yellow-400/30',
-  watch: 'bg-yellow-400/10 border-yellow-400/30',
-  NEUTRAL: 'bg-gray-400/10 border-gray-400/30',
+  long: 'bg-green-400/10 border-green-400/30', STRONG_BUY: 'bg-green-400/10 border-green-400/30', BUY: 'bg-green-400/10 border-green-400/30',
+  short: 'bg-red-400/10 border-red-400/30', STRONG_SELL: 'bg-red-400/10 border-red-400/30', SELL: 'bg-red-400/10 border-red-400/30',
+  hold: 'bg-gray-400/10 border-gray-400/30', watch: 'bg-yellow-400/10 border-yellow-400/30', NEUTRAL: 'bg-gray-400/10 border-gray-400/30',
 };
 
 function fmt(n: number, dec = 2) {
   return n?.toFixed(dec) ?? '—';
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+// ── Reusable components ────────────────────────────────────────────────────────
+
+function InfoBox({ children, color = 'blue' }: { children: React.ReactNode; color?: 'blue' | 'yellow' | 'green' | 'red' }) {
+  const colors = {
+    blue:   'bg-blue-400/8 border-blue-400/20 text-blue-200',
+    yellow: 'bg-[#f0b90b]/8 border-[#f0b90b]/20 text-[#f0b90b]/90',
+    green:  'bg-green-400/8 border-green-400/20 text-green-200',
+    red:    'bg-red-400/8 border-red-400/20 text-red-200',
+  };
+  return (
+    <div className={`rounded-xl border p-4 text-xs leading-relaxed ${colors[color]}`}>
+      {children}
+    </div>
+  );
+}
+
+function Collapsible({ title, icon, children, defaultOpen = false }: {
+  title: string; icon?: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass-card rounded-xl border border-[#1a1f37] overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#1a1f37]/40 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium text-gray-300">
+          {icon}{title}
+        </span>
+        {open ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+      </button>
+      {open && <div className="px-4 pb-4">{children}</div>}
+    </div>
+  );
+}
 
 function StatCard({
   label, value, sub, color = 'text-[#f0b90b]', icon: Icon,
@@ -140,6 +193,8 @@ function ScannerTab() {
     }
   };
 
+  const info = PROFILE_INFO[profile];
+
   return (
     <div className="space-y-4">
       {/* Controls */}
@@ -174,6 +229,23 @@ function ScannerTab() {
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             Scan
           </button>
+        </div>
+      </div>
+
+      {/* Profile info card — changes with selection */}
+      <div className="glass-card rounded-xl border border-[#f0b90b]/20 bg-[#f0b90b]/5 p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[#f0b90b] font-semibold text-sm">{info.title}</span>
+              <span className="text-xs bg-[#f0b90b]/20 text-[#f0b90b] px-2 py-0.5 rounded-full">{info.horizon}</span>
+            </div>
+            <p className="text-gray-300 text-xs mb-2">{info.desc}</p>
+            <p className="text-gray-500 text-xs"><span className="text-gray-400">Indikatoren:</span> {info.indicators}</p>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-[#f0b90b]/10">
+          <p className="text-xs text-gray-400"><span className="text-[#f0b90b] font-medium">Ziel erreicht — was tun? </span>{info.action}</p>
         </div>
       </div>
 
@@ -227,6 +299,24 @@ function ScannerTab() {
           </div>
         </div>
       )}
+
+      {/* Signal legend — always visible */}
+      <Collapsible title="Signal-Legende & Handlungsanleitung" icon={<Shield className="w-4 h-4 text-[#f0b90b]" />}>
+        <div className="space-y-3 pt-1">
+          {SIGNAL_GUIDE.map(g => (
+            <div key={g.signal} className={`flex items-start gap-3 p-3 rounded-lg border ${g.bg}`}>
+              <span className={`text-xs font-bold min-w-[90px] pt-0.5 ${g.color}`}>{g.label}</span>
+              <span className="text-xs text-gray-300">{g.desc}</span>
+            </div>
+          ))}
+          <InfoBox color="yellow">
+            <strong>Score-Skala −10 bis +10:</strong> Jeder Indikator liefert einen Teilscore, gewichtet nach Profil.
+            Über +4 = bullisches Gesamtbild. Unter −4 = bärisch. Dazwischen: abwarten.<br />
+            <strong className="block mt-1.5">Stop-Loss ist Pflicht.</strong> Setze den Stop-Loss immer sofort nach dem Kauf.
+            Wenn der Kurs den Stop-Loss berührt → verkaufen, kein Hoffen. Discipline schlägt Hoffnung.
+          </InfoBox>
+        </div>
+      </Collapsible>
 
       {!loading && results.length === 0 && (
         <div className="text-center py-12 text-gray-500 text-sm">
@@ -369,6 +459,31 @@ function AgentTab() {
           </div>
         </div>
       )}
+
+      {/* How the agent learns */}
+      <Collapsible title="Wie lernt der Agent?" icon={<Brain className="w-4 h-4 text-[#f0b90b]" />}>
+        <div className="space-y-3 pt-1 text-xs text-gray-300 leading-relaxed">
+          <p>Der Agent startet mit vordefinierten Gewichten für jeden Indikator (RSI: 20%, MACD: 15%, EMA: 20% usw.) und passt diese nach jedem abgeschlossenen Trade an.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { step: '1', title: 'Vorhersage', desc: 'Scanner bewertet eine Aktie und erzeugt ein Signal (Long/Short) mit Confidence-Score.' },
+              { step: '2', title: 'Trade', desc: 'Du handelst paper (oder real) und trägst das Ergebnis ein — Gewinn oder Verlust.' },
+              { step: '3', title: 'Lernupdate', desc: 'Agent erhöht Gewichte der Indikatoren die richtig lagen, reduziert die die falsch lagen.' },
+            ].map(s => (
+              <div key={s.step} className="bg-[#0d1220] rounded-lg p-3">
+                <div className="w-5 h-5 rounded-full bg-[#f0b90b] text-black text-xs font-bold flex items-center justify-center mb-2">{s.step}</div>
+                <div className="font-semibold text-white text-xs mb-1">{s.title}</div>
+                <div className="text-gray-400">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+          <InfoBox color="blue">
+            <strong>Paper-Trading zuerst.</strong> Teste die Strategie mindestens 4–6 Wochen mit virtuellem Geld bevor du echtes Kapital einsetzt.
+            Eine Win-Rate unter 50% bedeutet nicht unbedingt eine schlechte Strategie — entscheidend ist das Risk/Reward-Verhältnis.
+            1 gewinnender Trade von 3:1 deckt 3 Verluste.
+          </InfoBox>
+        </div>
+      </Collapsible>
     </div>
   );
 }
@@ -583,6 +698,32 @@ function BacktestTab() {
           )}
         </div>
       )}
+
+      {/* Backtest & metrics explanation */}
+      <Collapsible title="Was bedeuten die Kennzahlen?" icon={<BarChart2 className="w-4 h-4 text-[#f0b90b]" />}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {[
+            { term: 'Gesamtrendite', desc: 'Prozentualer Gewinn/Verlust auf das Startkapital über den gesamten Testzeitraum.' },
+            { term: 'Win-Rate', desc: 'Anteil profitabler Trades. 50% = Break-Even, aber erst ab ~55% mit gutem RRR wirklich profitabel.' },
+            { term: 'Max. Drawdown', desc: 'Größter Rückgang vom Hoch zum Tief. Je kleiner, desto stabiler die Strategie. Über 25% = hohes Risiko.' },
+            { term: 'Sharpe Ratio', desc: 'Rendite pro Risikoeinheit. Unter 0.5 = schwach. 1.0+ = gut. 2.0+ = exzellent.' },
+            { term: 'Risk/Reward (RRR)', desc: 'Verhältnis von Ø-Gewinn zu Ø-Verlust. Bei 2:1 reicht eine 35% Win-Rate zum Gewinnen.' },
+            { term: 'Walk-Forward', desc: 'Testet die Strategie sequenziell in zeitlichen Abschnitten — realistischer als klassisches Backtesting.' },
+          ].map(m => (
+            <div key={m.term} className="bg-[#0d1220] rounded-lg p-3">
+              <div className="text-[#f0b90b] text-xs font-semibold mb-1">{m.term}</div>
+              <div className="text-gray-400 text-xs">{m.desc}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3">
+          <InfoBox color="green">
+            <strong>Krisentraining-Tipp:</strong> Teste deine Strategie immer gegen den COVID-Crash (2020) und den Zinsschock (2022).
+            Eine Strategie die nur in Bullenmärkten funktioniert, ist keine Strategie — es ist Glück.
+            Ziel: Im Crash Verluste unter 15% halten, in der Erholung überproportional profitieren.
+          </InfoBox>
+        </div>
+      </Collapsible>
     </div>
   );
 }
