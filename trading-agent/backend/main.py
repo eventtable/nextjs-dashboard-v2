@@ -357,11 +357,13 @@ _train_status: Dict[str, Any] = {"running": False, "progress": None, "error": No
 
 def _run_training_thread(req: TrainRequest):
     global _train_status
+    import traceback
     try:
         from train_loop import run_training, DEFAULT_TICKERS
         tickers = req.tickers or DEFAULT_TICKERS
         _train_status["running"] = True
         _train_status["error"] = None
+        _train_status["started_at"] = datetime.now().isoformat()
         run_training(
             tickers=tickers,
             start=req.from_date,
@@ -371,7 +373,8 @@ def _run_training_thread(req: TrainRequest):
             resume=True,
         )
     except Exception as e:
-        _train_status["error"] = str(e)
+        _train_status["error"] = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+        print(f"[TRAIN ERROR] {_train_status['error']}", flush=True)
     finally:
         _train_status["running"] = False
         # Refresh agent weights from saved state
@@ -411,10 +414,17 @@ def _get_progress():
 async def training_status():
     """Get current training progress."""
     return {
-        "running": _train_status.get("running", False),
-        "error":   _train_status.get("error"),
+        "running":  _train_status.get("running", False),
+        "error":    _train_status.get("error"),
         "progress": _get_progress(),
+        "started":  _train_status.get("started_at"),
     }
+
+
+@app.post("/api/agent/train/clear-error")
+async def clear_train_error():
+    _train_status["error"] = None
+    return {"ok": True}
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────

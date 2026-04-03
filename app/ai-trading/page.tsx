@@ -439,14 +439,23 @@ function TrainingPanel() {
       setRunning(s.running);
       if (s.progress) setProgress(s.progress);
       if (s.error) setError(s.error);
-    } catch (_e) { /* ignore */ }
+      return s.running;
+    } catch (_e) { return false; }
   }, [getTrainingStatus]);
 
   useEffect(() => { poll(); }, [poll]);
 
+  // Poll while running; after stop do 3 extra polls to catch final error/progress
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(poll, 4000);
+    let extraPolls = 0;
+    const id = setInterval(async () => {
+      const stillRunning = await poll();
+      if (!stillRunning) {
+        extraPolls++;
+        if (extraPolls >= 3) clearInterval(id);
+      }
+    }, 4000);
     return () => clearInterval(id);
   }, [running, poll]);
 
