@@ -5,8 +5,6 @@ Nutzt die Anthropic API für kontextuelle Marktanalysen.
 """
 
 import os
-from .scoring import StockScore
-from .agent import AgentState
 
 try:
     import anthropic
@@ -27,138 +25,149 @@ Deine Regeln:
 """
 
 
-def _format_signals(scores: list[StockScore]) -> str:
-    lines = []
-    for s in scores:
-        lines.append(
-            f"{s.ticker} | Kurs: ${s.price:.2f} | Signal: {s.signal.upper()} | Score: {s.total_score:.1f}\n"
-            f"  Momentum: {s.horizons.momentum:.1f} | Swing: {s.horizons.swing:.1f} | Position: {s.horizons.position:.1f}\n"
-            f"  RSI: {s.ind.rsi:.1f} | MACD-Hist: {s.ind.macd_hist:+.4f} | "
-            f"EMA9/21: {'↑' if s.ind.ema9 > s.ind.ema21 else '↓'} | "
-            f"Supertrend: {'↑' if s.ind.supertrend_above else '↓'} | Fib: {s.ind.fib_level*100:.0f}%\n"
-            f"  ATR: {s.ind.atr:.2f} | Vol-Ratio: {s.ind.volume_ratio:.1f}x | "
-            f"52W-Dist: -{s.ind.dist_52h*100:.1f}% vom Hoch\n"
-            f"  Stop-Loss: ${s.stop_loss:.2f} | Ziel 1: ${s.target_1:.2f} | Ziel 2: ${s.target_2:.2f}\n"
-            f"  Gründe: {', '.join(s.reasons[:3])}"
+class ClaudeAnalyst:
+    """Synchronous wrapper for Claude-powered trading analysis."""
+
+    def __init__(self, api_key: str = ""):
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
+
+    def analyze(self, ticker: str, indicators: dict, profile: str, context: str = "") -> dict:
+        """Analyze a single ticker and return a structured result dict."""
+        if not self.api_key or not HAS_ANTHROPIC:
+            return self._fallback_analysis(ticker, indicators, profile)
+
+        price   = indicators.get("price", 0.0)
+        rsi     = indicators.get("rsi", 50.0)
+        macd_h  = indicators.get("macd_hist", 0.0)
+        atr     = indicators.get("atr", price * 0.02)
+        adx     = indicators.get("adx", 20.0)
+
+        prompt = (
+            f"Profil: {profile.upper()}\n"
+            f"Ticker: {ticker} | Kurs: ${price:.2f}\n"
+            f"RSI: {rsi:.1f} | MACD-Hist: {macd_h:+.4f} | ADX: {adx:.0f} | ATR: {atr:.2f}\n"
+            f"Supertrend: {'bullisch' if indicators.get('supertrend_direction', 1) >= 0 else 'bärisch'}\n"
         )
-    return "\n\n".join(lines)
+        if context:
+            prompt += f"\nKontext: {context}\n"
+        prompt += "\nGib eine prägnante Analyse mit konkreten Kurszielen."
+
+        try:
+            client = anthropic.Anthropic(api_key=self.api_key)
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=500,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            analysis_text = response.content[0].text
+        except Exception as e:
+            analysis_text = f"API-Fehler: {e}"
+
+        return self._build_result(ticker, indicators, profile, analysis_text)
+
+    def _fallback_analysis(self, ticker: str, indicators: dict, profile: str) -> dict:
+        """Rule-based fallback when no API key is available."""
+        price = indicators.get("price", 0.0)
+        rsi   = indicators.get("rsi", 50.0)
+        macd_h = indicators.get("macd_hist", 0.0)
+        atr   = indicators.get("atr", price * 0.02)
+        st_up = indicators.get("supertrend_direction", 1) >= 0
+
+        signals = []
+        score = 0.0
+
+        if rsi < 35:
+            signals.append(f"RSI {rsi:.1f} — überverkauft (Kaufzone)")
+            score += 2.0
+        elif rsi > 65:
+            signals.append(f"RSI {rsi:.1f} — überkauft (Vorsicht)")
+            score -= 2.0
+
+        if macd_h > 0:
+            signals.append("MACD-Histogramm positiv — bullischer Impuls")
+            score += 1.5
+        else:
+            signals.append("MACD-Histogramm negativ — bärischer Druck")
+            score -= 1.5
+
+        if st_up:
+            signals.append("Supertrend bullisch — Aufwärtstrend intakt")
+            score += 1.5
+        else:
+            signals.append("Supertrend bärisch — Abwärtstrend")
+            score -= 1.5
+
+        if score > 2:
+            action = "LONG"
+            stop_loss = round(price - 1.5 * atr, 2)
+            target_1  = round(price + 2.0 * atr, 2)
+            target_2  = round(price + 4.0 * atr, 2)
+        elif score < -2:
+            action = "SHORT / MEIDEN"
+            stop_loss = round(price + 1.5 * atr, 2)
+            target_1  = round(price - 2.0 * atr, 2)
+            target_2  = round(price - 4.0 * atr, 2)
+        else:
+            action = "NEUTRAL / BEOBACHTEN"
+            stop_loss = round(price - atr, 2)
+            target_1  = round(price + atr, 2)
+            target_2  = round(price + 2 * atr, 2)
+
+        text = (
+            f"[Demo-Modus — kein API-Key]\n\n"
+            f"{ticker} ({profile.upper()}): {action}\n\n"
+            + "\n".join(f"• {s}" for s in signals)
+            + f"\n\nStop-Loss: ${stop_loss} | Ziel 1: ${target_1} | Ziel 2: ${target_2}\n"
+            f"API-Key unter Einstellungen eintragen für vollständige KI-Analyse."
+        )
+
+        return self._build_result(ticker, indicators, profile, text, stop_loss, target_1, target_2)
+
+    def _build_result(self, ticker: str, indicators: dict, profile: str, analysis_text: str,
+                       stop_loss: float = 0.0, target_1: float = 0.0, target_2: float = 0.0) -> dict:
+        price = indicators.get("price", 0.0)
+        atr   = indicators.get("atr", price * 0.02)
+        if not stop_loss:
+            stop_loss = round(price - 1.5 * atr, 2)
+        if not target_1:
+            target_1 = round(price + 2.0 * atr, 2)
+        if not target_2:
+            target_2 = round(price + 4.0 * atr, 2)
+        return {
+            "ticker":   ticker,
+            "profile":  profile,
+            "analysis": analysis_text,
+            "stop_loss": stop_loss,
+            "target_1":  target_1,
+            "target_2":  target_2,
+        }
 
 
-async def analyze_signals(
-    scores: list[StockScore],
-    profile: str,
-    api_key: str | None = None,
-) -> str:
+# ── Standalone async helpers (kept for backwards-compat) ─────────────────────
+
+async def analyze_signals(scores, profile: str, api_key: str | None = None) -> str:
     key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
     if not key or not HAS_ANTHROPIC:
         return _demo_analysis(scores, profile)
-
     client = anthropic.Anthropic(api_key=key)
-    prompt = (
-        f"Profil: {profile.upper()}\n\n"
-        f"Analysiere folgende {len(scores)} Aktie(n):\n\n"
-        f"{_format_signals(scores)}\n\n"
-        f"Fasse am Ende die 1–2 besten Chancen zusammen."
-    )
+    lines = [
+        f"{s.ticker} | ${s.price:.2f} | {s.signal.upper()} | Score {s.total_score:.1f}"
+        for s in scores
+    ]
+    prompt = f"Profil: {profile.upper()}\n\n" + "\n".join(lines) + "\n\nTop-Chance zusammenfassen."
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=600,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text
+        r = client.messages.create(model="claude-sonnet-4-6", max_tokens=600,
+                                   system=SYSTEM_PROMPT,
+                                   messages=[{"role": "user", "content": prompt}])
+        return r.content[0].text
     except Exception as e:
         return f"API-Fehler: {e}\n\n{_demo_analysis(scores, profile)}"
 
 
-async def analyze_portfolio(
-    positions: list[dict],
-    scores: list[StockScore],
-    api_key: str | None = None,
-) -> str:
-    key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
-    if not key or not HAS_ANTHROPIC:
-        return _demo_portfolio_analysis(positions, scores)
-
-    client = anthropic.Anthropic(api_key=key)
-    depot_lines = []
-    for p in positions:
-        s = next((x for x in scores if x.ticker == p["ticker"]), None)
-        buy = p.get("buy_price", p.get("einstandKurs", 0))
-        cur = p.get("current", buy)
-        pnl = (cur - buy) / buy * 100 if buy else 0
-        line = f"{p['ticker']}: {p.get('qty', p.get('stueck', 0))} Stk. | Kauf ${buy:.2f} | P&L {pnl:+.1f}%"
-        if s:
-            line += f" | Signal: {s.signal.upper()} | Score: {s.total_score:.1f}"
-        depot_lines.append(line)
-
-    prompt = (
-        f"Depot ({len(positions)} Positionen):\n\n" + "\n".join(depot_lines)
-        + "\n\nGib für jede Position: Halten / Teilverkauf / Nachkauf / Absichern. "
-          "Nenne Stop-Loss-Niveaus und bewerte das Gesamtrisiko."
-    )
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=700,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text
-    except Exception as e:
-        return f"API-Fehler: {e}"
-
-
-async def analyze_backtest_learnings(
-    agent_state: AgentState,
-    crisis_results: list[dict],
-    api_key: str | None = None,
-) -> str:
-    key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
-    if not key or not HAS_ANTHROPIC:
-        return "Claude-Analyse: API-Key in Einstellungen eintragen für vollständige Lernauswertung."
-
-    client = anthropic.Anthropic(api_key=key)
-    weights_str = "\n".join(f"  {k.upper()}: {v*100:.1f}%" for k, v in agent_state.weights.items())
-    crisis_str  = "\n".join(
-        f"  {r.get('name')}: {r.get('win_rate', 0):.1f}% Win-Rate ({r.get('trades', 0)} Trades)"
-        for r in crisis_results
-    )
-    prompt = (
-        f"Agent: {len(agent_state.trades)} Paper-Trades\n\n"
-        f"Gewichte:\n{weights_str}\n\nKrisentraining:\n{crisis_str}\n\n"
-        "Was sagen die Gewichte aus? Wo ist der Agent schwach? Was optimieren?"
-    )
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=500,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return response.content[0].text
-    except Exception as e:
-        return f"API-Fehler: {e}"
-
-
-def _demo_analysis(scores: list[StockScore], profile: str) -> str:
-    lines = [f"Trading-Analyse ({profile.upper()}) — Demo-Modus (kein API-Key):\n"]
+def _demo_analysis(scores, profile: str) -> str:
+    lines = [f"Trading-Analyse ({profile.upper()}) — Demo-Modus:\n"]
     for s in scores:
-        emoji = "🟢" if s.signal == "long" else "🔴" if s.signal == "short" else "🟡"
-        lines.append(
-            f"{emoji} {s.ticker}: {s.signal.upper()} | Score {s.total_score:+.1f}\n"
-            f"   Stop: ${s.stop_loss:.2f} | Ziel 1: ${s.target_1:.2f} | Ziel 2: ${s.target_2:.2f}\n"
-            f"   {', '.join(s.reasons[:2]) or 'Indikatoren neutral'}"
-        )
-    lines.append("\nAPI-Key unter Einstellungen eintragen für KI-Analyse.")
-    return "\n".join(lines)
-
-
-def _demo_portfolio_analysis(positions: list[dict], scores: list[StockScore]) -> str:
-    lines = ["Depot-Analyse — Demo-Modus:\n"]
-    for p in positions:
-        s = next((x for x in scores if x.ticker == p["ticker"]), None)
-        action = "HALTEN"
-        if s:
-            if s.signal == "long" and s.total_score > 5:   action = "NACHKAUFEN"
-            elif s.signal == "short" or s.total_score < -3: action = "VERKAUFEN / ABSICHERN"
-        lines.append(f"  {p['ticker']}: {action}")
+        mark = "LONG" if s.signal == "long" else "SHORT" if s.signal == "short" else "NEUTRAL"
+        lines.append(f"{s.ticker}: {mark} | Score {s.total_score:+.1f}")
     return "\n".join(lines)

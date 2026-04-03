@@ -1,19 +1,19 @@
 """FastAPI trading agent backend server."""
 import os
-from typing import List, Optional, Any, Dict
+from typing import List, Any, Dict
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from data.fetcher import fetch_ohlcv, fetch_multiple, CRISIS_EPISODES
 from core.indicators import compute_all
-from core.scoring import PROFILES, get_signal, get_recommendation
-from core.agent import TradingAgent
+from core.scoring import score_stock, get_signal, get_recommendation, PROFILES
+from core.agent import TradingAgent, _dict_to_indicator_result
 from core.backtest import BacktestConfig, run_backtest, run_crisis_backtest
 from core.claude_analyst import ClaudeAnalyst
 
@@ -42,7 +42,7 @@ os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
 agent = TradingAgent(state_file=STATE_FILE)
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-claude = ClaudeAnalyst(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+claude = ClaudeAnalyst(api_key=ANTHROPIC_API_KEY)
 
 # ── Pydantic models ────────────────────────────────────────────────────────────
 
@@ -130,8 +130,8 @@ async def scanner(
     if profile not in PROFILES:
         raise HTTPException(400, f"Unknown profile: {profile}. Use: {list(PROFILES.keys())}")
 
-    score_fn = PROFILES[profile]
     data = fetch_multiple(ticker_list, period="1y")
+    weights = agent.get_weights()
 
     results = []
     for ticker, df in data.items():
@@ -140,14 +140,15 @@ async def scanner(
         indicators = compute_all(df)
         if not indicators:
             continue
-        score = score_fn(indicators)
-        signal = get_signal(score)
-        rec = get_recommendation(score, profile, indicators)
+        price = indicators.get("price", 0.0)
+        ind = _dict_to_indicator_result(indicators, price)
+        scored = score_stock(ticker, price, ind, profile, weights)
+        rec = get_recommendation(scored.total_score, profile, indicators)
         results.append(
             ScanResult(
                 ticker=ticker,
-                score=round(score, 2),
-                signal=signal,
+                score=round(scored.total_score, 2),
+                signal=scored.signal,
                 profile=profile,
                 indicators=indicators,
                 recommendation=rec,
@@ -206,9 +207,9 @@ async def backtest(req: BacktestRequest):
     result = run_backtest(config, agent)
     return {
         "equity_curve": result.equity_curve,
-        "trades": result.trades,
-        "metrics": result.metrics,
-        "config": result.config,
+        "trades":       result.trades,
+        "metrics":      result.metrics,
+        "config":       result.config,
     }
 
 
@@ -230,10 +231,10 @@ async def crisis_backtest(req: CrisisBacktestRequest):
     )
     return {
         "equity_curve": result.equity_curve,
-        "trades": result.trades,
-        "metrics": result.metrics,
-        "config": result.config,
-        "crisis": CRISIS_EPISODES.get(req.crisis_id, {}),
+        "trades":       result.trades,
+        "metrics":      result.metrics,
+        "config":       result.config,
+        "crisis":       CRISIS_EPISODES.get(req.crisis_id, {}),
     }
 
 
@@ -241,18 +242,23 @@ async def crisis_backtest(req: CrisisBacktestRequest):
 async def get_agent_state():
     """Return agent state summary."""
     stats = agent.get_stats()
-    recent_predictions = agent.state.predictions[-10:]  # last 10
+    recent_predictions = agent.state.predictions[-10:]
     open_trades = [t for t in agent.state.paper_trades if t.get("is_open", True)]
-    weights = agent.state.weights
-
     return {
-        "stats": stats,
-        "weights": weights,
-        "recent_predictions": recent_predictions,
-        "open_trades": open_trades,
-        "created_at": agent.state.created_at,
-        "updated_at": agent.state.updated_at,
+        "stats":               stats,
+        "weights":             agent.state.weights,
+        "recent_predictions":  recent_predictions,
+        "open_trades":         open_trades,
+        "created_at":          agent.state.created_at,
+        "updated_at":          agent.state.updated_at,
     }
+
+
+@app.post("/api/agent/reset")
+async def reset_agent():
+    """Reset agent state to defaults."""
+    agent.reset()
+    return {"success": True, "message": "Agent zurückgesetzt"}
 
 
 @app.post("/api/agent/feedback")
@@ -261,14 +267,13 @@ async def submit_feedback(req: FeedbackRequest):
     success = agent.record_outcome(req.prediction_id, req.actual_return_pct)
     if not success:
         raise HTTPException(404, f"Prediction {req.prediction_id} not found")
-
-    stats = agent.get_stats()
-    return {"success": True, "updated_stats": stats}
+    return {"success": True, "updated_stats": agent.get_stats()}
 
 
 @app.post("/api/agent/trade")
 async def paper_trade(req: TradeRequest):
     """Record a paper trade entry."""
+    from dataclasses import asdict
     trade = agent.paper_trade(
         ticker=req.ticker.upper(),
         action=req.action,
@@ -276,7 +281,6 @@ async def paper_trade(req: TradeRequest):
         price=req.price,
         profile=req.profile,
     )
-    from dataclasses import asdict
     return asdict(trade)
 
 
@@ -302,18 +306,12 @@ async def claude_analysis(req: ClaudeAnalysisRequest):
     if not indicators:
         raise HTTPException(500, f"Could not compute indicators for {ticker}")
 
-    if claude is None:
-        # Return fallback without Claude
-        analyst = ClaudeAnalyst(api_key="")
-        analysis = analyst._fallback_analysis(ticker, indicators, req.profile)
-    else:
-        analysis = claude.analyze(
-            ticker=ticker,
-            indicators=indicators,
-            profile=req.profile,
-            context=req.context,
-        )
-
+    analysis = claude.analyze(
+        ticker=ticker,
+        indicators=indicators,
+        profile=req.profile,
+        context=req.context,
+    )
     return {**analysis, "indicators": indicators}
 
 
