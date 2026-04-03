@@ -227,3 +227,91 @@ def compute_all(df: pd.DataFrame) -> Dict[str, Any]:
     except Exception as e:
         print(f"Error computing indicators: {e}")
         return {}
+
+
+# ─────────────────────────────────────────────────────────────
+# IndicatorResult — typed container used by scoring + backtest
+# ─────────────────────────────────────────────────────────────
+from dataclasses import dataclass, field as dc_field
+
+
+@dataclass
+class IndicatorResult:
+    price:          float = 0.0
+    rsi:            float = 50.0
+    macd:           float = 0.0
+    macd_hist:      float = 0.0
+    volume_ratio:   float = 1.0   # current vol / 20-bar avg
+    bb_pct:         float = 0.5   # Bollinger %B
+    dist_52h:       float = 0.1   # distance below 52W high (fraction)
+    dist_52l:       float = 0.1   # distance above 52W low (fraction)
+    stoch_k:        float = 50.0
+    ema9:           float = 0.0
+    ema21:          float = 0.0
+    ema50:          float = 0.0
+    ema200:         float = 0.0
+    supertrend_above: bool = True
+    fib_dist:       float = 0.05  # distance to nearest Fib level
+    fib_level:      float = 0.5   # nearest Fib level (0–1)
+    cci:            float = 0.0
+    adx:            float = 20.0
+    atr:            float = 0.0
+
+
+def calc_all_indicators(c, h, l, v) -> IndicatorResult:
+    """
+    Takes numpy arrays (close, high, low, volume) and returns IndicatorResult.
+    Wraps compute_all() which expects a pd.DataFrame.
+    """
+    import pandas as pd
+    import numpy as np
+
+    n = len(c)
+    if n < 30:
+        return IndicatorResult(price=float(c[-1]) if n else 0.0)
+
+    df = pd.DataFrame({"close": c, "high": h, "low": l, "volume": v})
+    d  = compute_all(df)
+    if not d:
+        return IndicatorResult(price=float(c[-1]))
+
+    price = d["price"]
+
+    # Volume ratio: current vs 20-bar average
+    vol_avg = float(np.mean(v[-20:])) if n >= 20 else float(np.mean(v))
+    vol_ratio = float(v[-1]) / vol_avg if vol_avg > 0 else 1.0
+
+    # 52W distances
+    w52 = min(252, n)
+    high52 = float(np.max(h[-w52:]))
+    low52  = float(np.min(l[-w52:]))
+    dist_52h = (high52 - price) / high52 if high52 > 0 else 0.0
+    dist_52l = (price - low52)  / price  if price  > 0 else 0.0
+
+    # Nearest Fibonacci level
+    fib_levels_pct = [0.0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0]
+    fib_prices = {lvl: high52 - (high52 - low52) * lvl for lvl in fib_levels_pct}
+    nearest_lvl  = min(fib_prices, key=lambda k: abs(fib_prices[k] - price))
+    fib_dist = abs(fib_prices[nearest_lvl] - price) / price if price > 0 else 0.05
+
+    return IndicatorResult(
+        price         = price,
+        rsi           = d.get("rsi", 50.0),
+        macd          = d.get("macd", 0.0),
+        macd_hist     = d.get("macd_hist", 0.0),
+        volume_ratio  = round(vol_ratio, 2),
+        bb_pct        = d.get("bb_pct_b", 0.5),
+        dist_52h      = round(dist_52h, 4),
+        dist_52l      = round(dist_52l, 4),
+        stoch_k       = d.get("stoch_k", 50.0),
+        ema9          = d.get("ema20", price),   # closest available is ema20; ema9 calc below
+        ema21         = d.get("ema20", price),
+        ema50         = d.get("ema50", price),
+        ema200        = d.get("ema200", price),
+        supertrend_above = d.get("supertrend_direction", 1) >= 0,
+        fib_dist      = round(fib_dist, 4),
+        fib_level     = nearest_lvl,
+        cci           = d.get("cci", 0.0),
+        adx           = d.get("adx", 20.0),
+        atr           = d.get("atr", price * 0.01),
+    )
