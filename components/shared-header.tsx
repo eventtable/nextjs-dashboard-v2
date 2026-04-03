@@ -16,7 +16,8 @@ import {
   BarChart2,
   Shield,
   LogOut,
-  User
+  User,
+  Brain,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { usePortfolio } from '@/hooks/use-portfolio';
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/smartmoney', label: 'Profis', icon: Grid3X3 },
   { href: '/risiko', label: 'Risiko', icon: BellRing },
   { href: '/indizes', label: 'Indizes', icon: BarChart2 },
+  { href: '/ai-trading', label: 'KI-Agent', icon: Brain },
 ];
 
 export default function SharedHeader({ 
