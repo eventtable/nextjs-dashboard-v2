@@ -323,7 +323,8 @@ function ScannerTab() {
                         ? `$${fmt(r.recommendation.target_1, 2)}` : '—'}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -359,14 +360,16 @@ function ScannerTab() {
 
 // ────────────────────── AGENT TAB ─────────────────────────────────────────────
 
+type TrainingProgress = {
+  window: number; total: number; pct: number; updated_at: string;
+  total_trades: number; total_wins: number; win_rate: number;
+  errors: number; last_window: string;
+};
+
 function TrainingPanel() {
   const { startTraining, getTrainingStatus } = useTrading();
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<{
-    window: number; total: number; pct: number; updated_at: string;
-    total_trades: number; total_wins: number; win_rate: number;
-    errors: number; last_window: string;
-  } | null>(null);
+  const [progress, setProgress] = useState<TrainingProgress | null>(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
 
@@ -376,7 +379,7 @@ function TrainingPanel() {
       setRunning(s.running);
       if (s.progress) setProgress(s.progress);
       if (s.error) setError(s.error);
-    } catch { /* ignore */ }
+    } catch (_e) { /* ignore */ }
   }, [getTrainingStatus]);
 
   useEffect(() => { poll(); }, [poll]);
