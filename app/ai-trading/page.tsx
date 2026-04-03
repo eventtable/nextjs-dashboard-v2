@@ -178,12 +178,18 @@ function ScannerTab() {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [tickerWarnings, setTickerWarnings] = useState<string[]>([]);
 
   const runScan = async () => {
     setLoading(true);
     setError('');
+    const list = tickers.split(',').map(t => t.trim()).filter(Boolean);
+
+    // Warn about invalid-looking tickers (contain spaces or are longer than 6 chars)
+    const warnings = list.filter(t => t.includes(' ') || t.length > 6);
+    setTickerWarnings(warnings);
+
     try {
-      const list = tickers.split(',').map(t => t.trim()).filter(Boolean);
       const data = await scan(list, profile);
       setResults(data);
     } catch (e) {
@@ -249,6 +255,22 @@ function ScannerTab() {
         </div>
       </div>
 
+      {/* Ticker validation warnings */}
+      {tickerWarnings.length > 0 && (
+        <div className="flex items-start gap-2 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg text-yellow-300 text-xs">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Kein Aktienname — Ticker-Symbol verwenden!</span>
+            <span className="text-yellow-400/70 ml-1">
+              {tickerWarnings.map(w => `"${w}"`).join(', ')} {tickerWarnings.length === 1 ? 'ist' : 'sind'} kein gültiges Ticker-Symbol.
+            </span>
+            <div className="mt-1 text-yellow-400/60">
+              Beispiele: Siemens Energy → <span className="font-mono text-yellow-300">ENR.DE</span> · Apple → <span className="font-mono text-yellow-300">AAPL</span> · SAP → <span className="font-mono text-yellow-300">SAP.DE</span> · BMW → <span className="font-mono text-yellow-300">BMW.DE</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-400/10 border border-red-400/30 rounded-lg text-red-400 text-sm">
           <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -287,10 +309,12 @@ function ScannerTab() {
                       {typeof r.indicators?.rsi === 'number' ? fmt(r.indicators.rsi as number, 1) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right text-red-400 font-mono">
-                      {r.recommendation?.stop_loss ? `$${fmt(r.recommendation.stop_loss, 2)}` : '—'}
+                      {r.recommendation?.stop_loss != null && r.recommendation.stop_loss > 0
+                        ? `$${fmt(r.recommendation.stop_loss, 2)}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-right text-green-400 font-mono">
-                      {r.recommendation?.target_1 ? `$${fmt(r.recommendation.target_1, 2)}` : '—'}
+                      {r.recommendation?.target_1 != null && r.recommendation.target_1 > 0
+                        ? `$${fmt(r.recommendation.target_1, 2)}` : '—'}
                     </td>
                   </tr>
                 ))}

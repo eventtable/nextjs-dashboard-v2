@@ -144,6 +144,9 @@ async def scanner(
         ind = _dict_to_indicator_result(indicators, price)
         scored = score_stock(ticker, price, ind, profile, weights)
         rec = get_recommendation(scored.total_score, profile, indicators)
+        rec["stop_loss"] = scored.stop_loss
+        rec["target_1"]  = scored.target_1
+        rec["target_2"]  = scored.target_2
         results.append(
             ScanResult(
                 ticker=ticker,
