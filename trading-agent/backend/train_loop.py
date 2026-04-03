@@ -36,12 +36,20 @@ WINDOW_MONTHS    = 6     # Länge jedes Trainingsfensters
 STEP_MONTHS      = 3     # Versatz zwischen Fenstern (Überlappung 50%)
 
 # Diversifiziertes Ticker-Set: US-Markt, Tech, Rohstoffe, ETFs
+# Klein gehalten für Railway (RAM-Limit) — kann lokal erweitert werden
 DEFAULT_TICKERS = [
-    "SPY", "QQQ", "DIA",         # US-Indizes
-    "AAPL", "MSFT", "NVDA",      # Tech
-    "AMZN", "GOOGL", "META",     # Big Tech
-    "TSLA", "JPM", "GS",         # Weitere Sektoren
-    "GLD", "TLT", "VIX",         # Rohstoffe / Anleihen / Volatilität
+    "SPY", "QQQ",                # US-Indizes
+    "AAPL", "MSFT",              # Tech
+    "GLD",                       # Gold (Diversifikation)
+]
+
+# Vollständiges Set für lokalen Betrieb / leistungsstarke Server
+FULL_TICKERS = [
+    "SPY", "QQQ", "DIA",
+    "AAPL", "MSFT", "NVDA",
+    "AMZN", "GOOGL", "META",
+    "TSLA", "JPM", "GS",
+    "GLD", "TLT",
 ]
 
 PROFILES = ["momentum", "swing", "position"]
@@ -173,6 +181,8 @@ def run_training(
                     w = result.metrics.get("wins", 0)
                     window_trades += t
                     window_wins   += w
+                    # Explizit Speicher freigeben
+                    del result
 
                 except Exception as e:
                     errors += 1
@@ -180,6 +190,8 @@ def run_training(
 
                 time.sleep(SLEEP_TICKER)
             time.sleep(SLEEP_PROFILE)
+            # Speicher nach jedem Ticker freigeben
+            import gc; gc.collect()
 
         total_trades += window_trades
         total_wins   += window_wins
