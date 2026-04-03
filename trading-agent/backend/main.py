@@ -1,6 +1,7 @@
 """FastAPI trading agent backend server."""
 import os
-from typing import List, Any, Dict
+import threading
+from typing import List, Any, Dict, Optional
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
@@ -106,6 +107,14 @@ class ClaudeAnalysisRequest(BaseModel):
     ticker: str
     profile: str = "momentum"
     context: str = ""
+
+
+class TrainRequest(BaseModel):
+    tickers: Optional[List[str]] = None
+    from_date: str = "2002-01-01"
+    to_date: str = "2026-03-01"
+    window_months: int = 6
+    step_months: int = 3
 
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
@@ -316,6 +325,81 @@ async def claude_analysis(req: ClaudeAnalysisRequest):
         context=req.context,
     )
     return {**analysis, "indicators": indicators}
+
+
+# ── Training state ────────────────────────────────────────────────────────────
+
+_train_lock = threading.Lock()
+_train_thread: Optional[threading.Thread] = None
+_train_status: Dict[str, Any] = {"running": False, "progress": None, "error": None}
+
+
+def _run_training_thread(req: TrainRequest):
+    global _train_status
+    try:
+        from train_loop import run_training, DEFAULT_TICKERS
+        tickers = req.tickers or DEFAULT_TICKERS
+        _train_status["running"] = True
+        _train_status["error"] = None
+        run_training(
+            tickers=tickers,
+            start=req.from_date,
+            end=req.to_date,
+            window_months=req.window_months,
+            step_months=req.step_months,
+            resume=True,
+        )
+    except Exception as e:
+        _train_status["error"] = str(e)
+    finally:
+        _train_status["running"] = False
+        # Refresh agent weights from saved state
+        try:
+            agent.load_state()
+        except Exception:
+            pass
+
+
+@app.post("/api/agent/train")
+async def start_training(req: TrainRequest):
+    """Start walk-forward training in background thread."""
+    global _train_thread, _train_status
+    with _train_lock:
+        if _train_status.get("running"):
+            # Return current progress if already running
+            from pathlib import Path
+            import json
+            progress_file = Path(__file__).parent / "data" / "train_progress.json"
+            progress = None
+            if progress_file.exists():
+                try:
+                    progress = json.loads(progress_file.read_text())
+                except Exception:
+                    pass
+            return {"started": False, "already_running": True, "progress": progress}
+
+        _train_thread = threading.Thread(target=_run_training_thread, args=(req,), daemon=True)
+        _train_thread.start()
+        return {"started": True, "message": "Training gestartet"}
+
+
+@app.get("/api/agent/train/status")
+async def training_status():
+    """Get current training progress."""
+    from pathlib import Path
+    import json
+    progress_file = Path(__file__).parent / "data" / "train_progress.json"
+    progress = None
+    if progress_file.exists():
+        try:
+            progress = json.loads(progress_file.read_text())
+        except Exception:
+            pass
+    return {
+        "running": _train_status.get("running", False),
+        "error":   _train_status.get("error"),
+        "progress": progress,
+    }
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────

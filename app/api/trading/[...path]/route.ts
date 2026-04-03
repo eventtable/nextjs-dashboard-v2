@@ -136,6 +136,28 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
     return NextResponse.json({ success: true, message: 'Agent zurückgesetzt (Demo)' });
   }
 
+  if (endpoint === 'agent/train') {
+    return NextResponse.json({ started: true, message: 'Training gestartet (Demo)' });
+  }
+
+  if (endpoint === 'agent/train/status') {
+    return NextResponse.json({
+      running: false,
+      error: null,
+      progress: {
+        window: 48,
+        total: 98,
+        pct: 49.0,
+        updated_at: new Date().toISOString(),
+        total_trades: 4320,
+        total_wins: 2506,
+        win_rate: 58.0,
+        errors: 3,
+        last_window: '2014-01-01 → 2014-07-01',
+      },
+    });
+  }
+
   if (endpoint === 'backtest' || endpoint === 'crisis/backtest') {
     const now = new Date();
     let capital = 10000;

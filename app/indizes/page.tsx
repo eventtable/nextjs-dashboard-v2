@@ -45,14 +45,14 @@ function YearChart({ data, trend, high52w, low52w, showFib }: {
   low52w: number;
   showFib: boolean;
 }) {
-  if (!data.length) return <div className="h-28 flex items-center justify-center text-gray-600 text-[10px]">Keine Daten</div>;
+  if (!data.length) return <div className="h-36 flex items-center justify-center text-gray-600 text-xs">Keine Daten</div>;
   const color = trend === 'bullish' ? '#22c55e' : trend === 'bearish' ? '#ef4444' : '#6b7280';
   const range = high52w - low52w;
   const yMin = low52w - range * 0.04;
   const yMax = high52w + range * 0.04;
 
   return (
-    <ResponsiveContainer width="100%" height={110}>
+    <ResponsiveContainer width="100%" height={150}>
       <AreaChart data={data} margin={{ top: 2, right: 36, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id={`g-${trend}`} x1="0" y1="0" x2="0" y2="1">
@@ -66,7 +66,7 @@ function YearChart({ data, trend, high52w, low52w, showFib }: {
           return (
             <ReferenceLine key={fib.level} y={fibPrice} stroke={fib.color}
               strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.7}
-              label={{ value: fib.label, position: 'right', fill: fib.color, fontSize: 8 }}
+              label={{ value: fib.label, position: 'right', fill: fib.color, fontSize: 10 }}
             />
           );
         })}
@@ -115,27 +115,27 @@ function IndexCard({ idx, showFib }: { idx: IndexData; showFib: boolean }) {
     : 0.5;
 
   return (
-    <div className="glass-card rounded-xl p-3 sm:p-4 border border-[#1a1f37] flex flex-col gap-2 hover:border-[#2a2f47] transition-colors">
+    <div className="glass-card rounded-xl p-4 sm:p-5 border border-[#1a1f37] flex flex-col gap-3 hover:border-[#2a2f47] transition-colors">
       {/* Header row */}
-      <div className="flex items-start justify-between gap-1.5">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-bold text-white text-sm sm:text-base leading-tight truncate">{idx.name}</p>
-          <p className="text-[10px] text-gray-500 truncate">{idx.region} · {idx.symbol}</p>
+          <p className="font-bold text-white text-base sm:text-lg leading-tight truncate">{idx.name}</p>
+          <p className="text-xs text-gray-500 truncate mt-0.5">{idx.region} · {idx.symbol}</p>
         </div>
         <TrendBadge trend={idx.trend} label={idx.trendLabel} />
       </div>
 
       {/* Price + changes */}
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-lg sm:text-2xl font-bold text-white tabular-nums leading-none truncate">{priceStr}
-            <span className="text-[10px] text-gray-500 font-normal ml-1">{idx.currency || 'Pkt'}</span>
+          <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums leading-none truncate">{priceStr}
+            <span className="text-xs text-gray-500 font-normal ml-1">{idx.currency || 'Pkt'}</span>
           </p>
         </div>
-        <div className="text-right space-y-0.5 flex-shrink-0">
-          <div className="flex items-center justify-end gap-1"><span className="text-[10px] text-gray-600">Heute</span><Chg value={idx.changeDay} /></div>
-          <div className="flex items-center justify-end gap-1"><span className="text-[10px] text-gray-600">1M</span><Chg value={idx.change1M} /></div>
-          <div className="flex items-center justify-end gap-1"><span className="text-[10px] text-gray-600">YTD</span><Chg value={idx.changeYTD} /></div>
+        <div className="text-right space-y-1 flex-shrink-0">
+          <div className="flex items-center justify-end gap-1.5"><span className="text-xs text-gray-500">Heute</span><Chg value={idx.changeDay} /></div>
+          <div className="flex items-center justify-end gap-1.5"><span className="text-xs text-gray-500">1M</span><Chg value={idx.change1M} /></div>
+          <div className="flex items-center justify-end gap-1.5"><span className="text-xs text-gray-500">YTD</span><Chg value={idx.changeYTD} /></div>
         </div>
       </div>
 
@@ -145,9 +145,9 @@ function IndexCard({ idx, showFib }: { idx: IndexData; showFib: boolean }) {
       {/* 52w range bar */}
       {idx.high52w > idx.low52w && (
         <div>
-          <div className="flex justify-between text-[9px] text-gray-600 mb-0.5">
-            <span>{idx.low52w.toLocaleString('de-DE', { maximumFractionDigits: 0 })} 52W-T</span>
-            <span>52W-H {idx.high52w.toLocaleString('de-DE', { maximumFractionDigits: 0 })}</span>
+          <div className="flex justify-between text-[11px] text-gray-500 mb-1">
+            <span>{idx.low52w.toLocaleString('de-DE', { maximumFractionDigits: 0 })} 52W-Tief</span>
+            <span>52W-Hoch {idx.high52w.toLocaleString('de-DE', { maximumFractionDigits: 0 })}</span>
           </div>
           <div className="relative h-1.5 bg-[#1a1f37] rounded-full overflow-visible">
             <div className="absolute inset-y-0 left-0 rounded-full"
@@ -159,7 +159,7 @@ function IndexCard({ idx, showFib }: { idx: IndexData; showFib: boolean }) {
       )}
 
       {/* MA row */}
-      <div className="flex items-center gap-3 text-[10px] text-gray-500 pt-1 border-t border-[#1a1f37]">
+      <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-[#1a1f37]">
         <span className={idx.price != null && idx.price > idx.ma20 ? 'text-green-400' : 'text-red-400'}>
           MA20 {idx.price != null && idx.price > idx.ma20 ? '▲' : '▼'} {idx.ma20.toLocaleString('de-DE', { maximumFractionDigits: 0 })}
         </span>
@@ -254,17 +254,17 @@ export default function IndizesPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="glass-card rounded-xl p-4 border border-[#1a1f37] h-64 animate-pulse bg-[#1a1f37]/30" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="glass-card rounded-xl p-4 border border-[#1a1f37] h-72 animate-pulse bg-[#1a1f37]/30" />
             ))}
           </div>
         ) : (
           <div className="space-y-5">
             {indices.length > 0 && <MarketMood indices={indices} />}
 
-            {/* All indices in one flat grid – like a chocolate bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+            {/* All indices in one flat grid – max 3 columns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {orderedGroups.flatMap(region =>
                 grouped[region].map(idx => (
                   <IndexCard key={idx.symbol} idx={idx} showFib={showFib} />

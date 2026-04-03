@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import SharedHeader from '@/components/shared-header';
 import {
   Brain, TrendingUp, Activity, Zap, RefreshCw, Play, RotateCcw,
-  AlertTriangle, ChevronDown, ChevronUp, Target, Shield, BarChart2,
+  AlertTriangle, ChevronDown, ChevronUp, Target, Shield, BarChart2, Cpu,
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -286,6 +286,7 @@ function ScannerTab() {
               <thead>
                 <tr className="border-b border-[#1a1f37] text-gray-400 text-xs">
                   <th className="text-left px-4 py-3">Ticker</th>
+                  <th className="text-right px-4 py-3">Kurs</th>
                   <th className="text-right px-4 py-3">Score</th>
                   <th className="text-center px-4 py-3">Signal</th>
                   <th className="text-right px-4 py-3">RSI</th>
@@ -294,9 +295,14 @@ function ScannerTab() {
                 </tr>
               </thead>
               <tbody>
-                {results.map(r => (
+                {results.map(r => {
+                  const price = r.indicators?.price as number | undefined;
+                  return (
                   <tr key={r.ticker} className="border-b border-[#1a1f37]/50 hover:bg-[#1a1f37]/30 transition-colors">
                     <td className="px-4 py-3 font-bold text-white">{r.ticker}</td>
+                    <td className="px-4 py-3 text-right font-mono text-white font-semibold">
+                      {price != null && price > 0 ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                    </td>
                     <td className={`px-4 py-3 text-right font-mono font-semibold ${r.score > 0 ? 'text-green-400' : r.score < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                       {r.score > 0 ? '+' : ''}{fmt(r.score, 1)}
                     </td>
@@ -352,6 +358,121 @@ function ScannerTab() {
 }
 
 // ────────────────────── AGENT TAB ─────────────────────────────────────────────
+
+function TrainingPanel() {
+  const { startTraining, getTrainingStatus } = useTrading();
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{
+    window: number; total: number; pct: number; updated_at: string;
+    total_trades: number; total_wins: number; win_rate: number;
+    errors: number; last_window: string;
+  } | null>(null);
+  const [error, setError] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const poll = useCallback(async () => {
+    try {
+      const s = await getTrainingStatus();
+      setRunning(s.running);
+      if (s.progress) setProgress(s.progress);
+      if (s.error) setError(s.error);
+    } catch { /* ignore */ }
+  }, [getTrainingStatus]);
+
+  useEffect(() => { poll(); }, [poll]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(poll, 4000);
+    return () => clearInterval(id);
+  }, [running, poll]);
+
+  const handleStart = async () => {
+    setError(''); setMsg('');
+    try {
+      const r = await startTraining();
+      if (r.already_running) {
+        setMsg('Training läuft bereits…');
+      } else {
+        setMsg('Training gestartet — Fortschritt wird alle 4s aktualisiert.');
+        setRunning(true);
+        setTimeout(poll, 1500);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Fehler beim Starten');
+    }
+  };
+
+  const barWidth = progress ? Math.min(100, progress.pct) : 0;
+
+  return (
+    <div className="glass-card rounded-xl p-4 border border-[#1a1f37] space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Cpu className="w-4 h-4 text-[#f0b90b]" />
+          <h3 className="text-sm font-semibold text-white">Historisches Volltraining (2002–2026)</h3>
+        </div>
+        <button
+          onClick={handleStart}
+          disabled={running}
+          className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+            running
+              ? 'border-[#f0b90b]/30 text-[#f0b90b]/50 bg-[#f0b90b]/5 cursor-not-allowed'
+              : 'border-[#f0b90b]/50 text-[#f0b90b] bg-[#f0b90b]/10 hover:bg-[#f0b90b]/20'
+          }`}>
+          {running ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+          {running ? 'Läuft…' : 'Training starten'}
+        </button>
+      </div>
+
+      <p className="text-xs text-gray-400">
+        Trainiert den Agenten auf 98 Zeitfenstern (je 6 Monate, Schritt 3 Monate) über alle Ticker.
+        Läuft als Hintergrundprozess — du kannst die Seite verlassen.
+      </p>
+
+      {(msg || error) && (
+        <div className={`text-xs px-3 py-2 rounded-lg border ${error
+          ? 'bg-red-400/10 border-red-400/30 text-red-400'
+          : 'bg-blue-400/8 border-blue-400/20 text-blue-300'}`}>
+          {error || msg}
+        </div>
+      )}
+
+      {progress && (
+        <div className="space-y-2">
+          {/* Progress bar */}
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <span>Fenster {progress.window}/{progress.total}</span>
+            <span className="font-semibold text-white">{progress.pct.toFixed(1)}%</span>
+          </div>
+          <div className="h-2 bg-[#0d1220] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${barWidth}%`, background: 'linear-gradient(90deg, #f0b90b, #f59e0b)' }}
+            />
+          </div>
+          {/* Stats row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            {[
+              { label: 'Trades', value: progress.total_trades.toLocaleString('de-DE') },
+              { label: 'Win-Rate', value: `${progress.win_rate.toFixed(1)}%` },
+              { label: 'Fehler', value: String(progress.errors) },
+              { label: 'Letztes Fenster', value: progress.last_window.split(' → ')[0] },
+            ].map(item => (
+              <div key={item.label} className="bg-[#0d1220] rounded-lg px-3 py-2">
+                <div className="text-[10px] text-gray-500 mb-0.5">{item.label}</div>
+                <div className="text-xs font-semibold text-white tabular-nums">{item.value}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-500">
+            Zuletzt aktualisiert: {new Date(progress.updated_at).toLocaleTimeString('de-DE')}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AgentTab() {
   const { getAgentState, resetAgent } = useTrading();
@@ -483,6 +604,9 @@ function AgentTab() {
           </div>
         </div>
       )}
+
+      {/* Training panel */}
+      <TrainingPanel />
 
       {/* How the agent learns */}
       <Collapsible title="Wie lernt der Agent?" icon={<Brain className="w-4 h-4 text-[#f0b90b]" />}>

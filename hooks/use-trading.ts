@@ -194,6 +194,35 @@ export function useTrading() {
     await apiPost('agent/reset', {});
   };
 
+  const startTraining = async (opts?: {
+    fromDate?: string;
+    toDate?: string;
+    windowMonths?: number;
+    stepMonths?: number;
+  }): Promise<{ started: boolean; already_running?: boolean; message?: string }> =>
+    apiPost('agent/train', {
+      from_date: opts?.fromDate ?? '2002-01-01',
+      to_date: opts?.toDate ?? '2026-03-01',
+      window_months: opts?.windowMonths ?? 6,
+      step_months: opts?.stepMonths ?? 3,
+    });
+
+  const getTrainingStatus = async (): Promise<{
+    running: boolean;
+    error: string | null;
+    progress: {
+      window: number;
+      total: number;
+      pct: number;
+      updated_at: string;
+      total_trades: number;
+      total_wins: number;
+      win_rate: number;
+      errors: number;
+      last_window: string;
+    } | null;
+  }> => apiGet('agent/train/status');
+
   return {
     scan,
     runBacktest,
@@ -202,5 +231,7 @@ export function useTrading() {
     runCrisisBacktest,
     claudeAnalysis,
     resetAgent,
+    startTraining,
+    getTrainingStatus,
   };
 }
