@@ -215,9 +215,11 @@ function ScannerTab() {
                       {typeof r.indicators?.rsi === 'number' ? fmt(r.indicators.rsi as number, 1) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right text-red-400 font-mono">
-                      {r.recommendation?.signal ? `$${fmt(r.recommendation.score, 0)}` : '—'}
+                      {r.recommendation?.stop_loss ? `$${fmt(r.recommendation.stop_loss, 2)}` : '—'}
                     </td>
-                    <td className="px-4 py-3 text-right text-green-400 font-mono">—</td>
+                    <td className="px-4 py-3 text-right text-green-400 font-mono">
+                      {r.recommendation?.target_1 ? `$${fmt(r.recommendation.target_1, 2)}` : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

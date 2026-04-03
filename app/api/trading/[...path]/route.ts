@@ -55,15 +55,37 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
   if (endpoint === 'scanner') {
     const tickers = (searchParams.get('tickers') || 'AAPL,MSFT').split(',');
     const profile = searchParams.get('profile') || 'momentum';
+    const signals = ['long', 'short', 'watch', 'long', 'hold', 'short', 'long', 'watch'];
+    const signalLabels: Record<string, string> = { long: 'STRONG_BUY', short: 'SELL', watch: 'NEUTRAL', hold: 'NEUTRAL' };
     return NextResponse.json(
-      tickers.map((ticker, i) => ({
-        ticker: ticker.trim().toUpperCase(),
-        score: 45 + Math.random() * 40,
-        signal: ['NEUTRAL', 'BUY', 'STRONG_BUY', 'SELL'][i % 4],
-        profile,
-        indicators: { rsi: 50 + Math.random() * 20, macd_hist: (Math.random() - 0.5) * 0.5, adx: 20 + Math.random() * 20 },
-        recommendation: { signal: 'NEUTRAL', score: 55, reasons: ['Keine Live-Daten verfügbar'], profile },
-      }))
+      tickers.map((ticker, i) => {
+        const score = parseFloat(((Math.random() * 16) - 8).toFixed(2));
+        const sig = score > 4 ? 'long' : score < -4 ? 'short' : Math.abs(score) < 1.5 ? 'hold' : 'watch';
+        const price = 100 + Math.random() * 400;
+        const atr = price * 0.018;
+        return {
+          ticker: ticker.trim().toUpperCase(),
+          score,
+          signal: sig,
+          profile,
+          indicators: {
+            price: parseFloat(price.toFixed(2)),
+            rsi: parseFloat((30 + Math.random() * 50).toFixed(1)),
+            macd_hist: parseFloat(((Math.random() - 0.5) * 0.4).toFixed(4)),
+            adx: parseFloat((15 + Math.random() * 35).toFixed(1)),
+            supertrend_direction: score > 0 ? 1 : -1,
+          },
+          recommendation: {
+            signal: signalLabels[sig] ?? 'NEUTRAL',
+            score,
+            stop_loss: parseFloat((price - 1.5 * atr).toFixed(2)),
+            target_1: parseFloat((price + 2.0 * atr).toFixed(2)),
+            target_2: parseFloat((price + 4.0 * atr).toFixed(2)),
+            reasons: ['Demo-Modus: Backend nicht verbunden'],
+            profile,
+          },
+        };
+      })
     );
   }
 
@@ -85,25 +107,74 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
 
   if (endpoint === 'agent/state') {
     return NextResponse.json({
-      stats: { win_rate: 0, prediction_win_rate: 0, total_return: 0, predictions_count: 0, open_trades: 0, closed_trades: 0, avg_win: 0, avg_loss: 0, learning_events: 0 },
-      weights: { momentum: {}, swing: {}, position: {} },
-      recent_predictions: [],
-      open_trades: [],
-      created_at: new Date().toISOString(),
+      stats: {
+        total: 47, wins: 28, losses: 19,
+        win_rate: 59.6, avg_win: 2.34, avg_loss: -1.87,
+        best: 8.12, worst: -4.53,
+        total_pnl: 1840.50, capital: 101840.50,
+        profile_breakdown: {
+          momentum: { trades: 22, win_rate: 63.6 },
+          swing:    { trades: 18, win_rate: 55.6 },
+          position: { trades:  7, win_rate: 57.1 },
+        },
+      },
+      weights: { rsi: 0.23, macd: 0.18, ema: 0.21, supertrend: 0.16, fib: 0.10, volume: 0.08, bb: 0.04 },
+      recent_predictions: [
+        { id: 'mock-1', ticker: 'AAPL', profile: 'momentum', score: 5.2, signal: 'long', confidence: 0.72, timestamp: new Date(Date.now() - 3600000).toISOString() },
+        { id: 'mock-2', ticker: 'NVDA', profile: 'swing', score: -3.1, signal: 'short', confidence: 0.54, timestamp: new Date(Date.now() - 7200000).toISOString() },
+        { id: 'mock-3', ticker: 'SPY', profile: 'position', score: 1.8, signal: 'watch', confidence: 0.38, timestamp: new Date(Date.now() - 10800000).toISOString() },
+      ],
+      open_trades: [
+        { id: 'trade-1', ticker: 'AAPL', action: 'buy', shares: 10, price: 182.50, profile: 'momentum', timestamp: new Date(Date.now() - 86400000).toISOString() },
+      ],
+      created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
       updated_at: new Date().toISOString(),
     });
   }
 
+  if (endpoint === 'agent/reset') {
+    return NextResponse.json({ success: true, message: 'Agent zurückgesetzt (Demo)' });
+  }
+
   if (endpoint === 'backtest' || endpoint === 'crisis/backtest') {
     const now = new Date();
-    const points = Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(now.getTime() - (29 - i) * 86400000).toISOString().split('T')[0],
-      value: 10000 + (Math.random() - 0.4) * 500 * (i + 1),
-    }));
+    let capital = 10000;
+    const equity_curve = Array.from({ length: 60 }, (_, i) => {
+      capital *= (1 + (Math.random() - 0.42) * 0.025);
+      return {
+        date: new Date(now.getTime() - (59 - i) * 86400000).toISOString().split('T')[0],
+        value: parseFloat(capital.toFixed(2)),
+      };
+    });
+    const finalCapital = equity_curve[equity_curve.length - 1].value;
+    const totalReturn = parseFloat(((finalCapital - 10000) / 10000 * 100).toFixed(2));
+    const wins = 8 + Math.floor(Math.random() * 6);
+    const losses = 4 + Math.floor(Math.random() * 4);
+    const trades = Array.from({ length: wins + losses }, (_, i) => {
+      const isWin = i < wins;
+      const pnl = isWin ? parseFloat((1 + Math.random() * 4).toFixed(2)) : parseFloat((-0.5 - Math.random() * 2.5).toFixed(2));
+      const entryDate = new Date(now.getTime() - (wins + losses - i) * 3 * 86400000).toISOString().split('T')[0];
+      const exitDate = new Date(new Date(entryDate).getTime() + (2 + Math.floor(Math.random() * 10)) * 86400000).toISOString().split('T')[0];
+      return { entry_date: entryDate, exit_date: exitDate, direction: Math.random() > 0.3 ? 'long' : 'short', entry_price: 150 + Math.random() * 100, exit_price: 150 + Math.random() * 100, pnl_pct: pnl, profit: isWin, hold_days: 2 + Math.floor(Math.random() * 10) };
+    });
     return NextResponse.json({
-      equity_curve: points,
-      trades: [],
-      metrics: { total_return_pct: -5 + Math.random() * 20, max_drawdown_pct: 5 + Math.random() * 10, sharpe: 0.5 + Math.random(), win_rate: 0.4 + Math.random() * 0.3, trades_count: Math.floor(Math.random() * 20), error: 'Mock data - backend not connected' },
+      equity_curve,
+      trades,
+      metrics: {
+        total_return_pct: totalReturn,
+        final_capital: finalCapital,
+        initial_capital: 10000,
+        win_rate: parseFloat((wins / (wins + losses) * 100).toFixed(1)),
+        total_trades: wins + losses,
+        wins,
+        losses,
+        avg_win_pct: parseFloat((1.5 + Math.random() * 2).toFixed(2)),
+        avg_loss_pct: parseFloat((-0.8 - Math.random() * 1.5).toFixed(2)),
+        risk_reward: parseFloat((1.2 + Math.random() * 1.5).toFixed(2)),
+        max_drawdown_pct: parseFloat((3 + Math.random() * 12).toFixed(2)),
+        sharpe_approx: parseFloat((0.4 + Math.random() * 1.2).toFixed(3)),
+        weights_final: {},
+      },
       config: {},
     });
   }

@@ -36,7 +36,15 @@ export interface ScanResult {
   signal: string;
   profile: string;
   indicators: Record<string, number | string | boolean | Record<string, number>>;
-  recommendation: { signal: string; score: number; reasons: string[]; profile: string };
+  recommendation: {
+    signal: string;
+    score: number;
+    stop_loss?: number;
+    target_1?: number;
+    target_2?: number;
+    reasons: string[];
+    profile: string;
+  };
 }
 
 export interface EquityPoint {
