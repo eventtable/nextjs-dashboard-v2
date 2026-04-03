@@ -51,8 +51,10 @@ SLEEP_TICKER     = 0.8   # Sekunden zwischen Ticker-Requests
 SLEEP_WINDOW     = 3.0   # Sekunden zwischen Fenstern
 SLEEP_PROFILE    = 0.2   # Sekunden zwischen Profilen
 
-PROGRESS_FILE    = Path(__file__).parent / "data" / "train_progress.json"
-LOG_FILE         = Path(__file__).parent / "data" / "train_loop.log"
+# Use /tmp on Railway (ephemeral but writable), fallback to local data/
+_DATA_DIR = Path("/tmp") if Path("/tmp").exists() and os.access("/tmp", os.W_OK) else Path(__file__).parent / "data"
+PROGRESS_FILE    = _DATA_DIR / "train_progress.json"
+LOG_FILE         = _DATA_DIR / "train_loop.log"
 
 # ── Setup ──────────────────────────────────────────────────────────────────────
 

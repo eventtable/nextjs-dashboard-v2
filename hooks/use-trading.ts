@@ -190,6 +190,9 @@ export function useTrading() {
   ): Promise<{ ticker: string; profile: string; analysis: string; stop_loss: number; target_1: number; target_2: number }> =>
     apiPost('claude-analysis', { ticker, profile, context: context || '' });
 
+  const searchTicker = async (q: string): Promise<{ symbol: string; name: string; exchange: string }[]> =>
+    apiGet('search', { q });
+
   const resetAgent = async (): Promise<void> => {
     await apiPost('agent/reset', {});
   };
@@ -225,6 +228,7 @@ export function useTrading() {
 
   return {
     scan,
+    searchTicker,
     runBacktest,
     getAgentState,
     getCrises,

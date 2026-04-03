@@ -39,6 +39,28 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
     return NextResponse.json({ status: 'mock', version: '1.0.0' });
   }
 
+  if (endpoint === 'search') {
+    const q = (searchParams.get('q') || '').toLowerCase();
+    const all = [
+      { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ' },
+      { symbol: 'MSFT', name: 'Microsoft Corporation', exchange: 'NASDAQ' },
+      { symbol: 'NVDA', name: 'NVIDIA Corporation', exchange: 'NASDAQ' },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.', exchange: 'NASDAQ' },
+      { symbol: 'AMZN', name: 'Amazon.com Inc.', exchange: 'NASDAQ' },
+      { symbol: 'META', name: 'Meta Platforms Inc.', exchange: 'NASDAQ' },
+      { symbol: 'TSLA', name: 'Tesla Inc.', exchange: 'NASDAQ' },
+      { symbol: 'SPY', name: 'SPDR S&P 500 ETF', exchange: 'NYSE' },
+      { symbol: 'SAP.DE', name: 'SAP SE', exchange: 'XETRA' },
+      { symbol: 'BMW.DE', name: 'BMW AG', exchange: 'XETRA' },
+      { symbol: 'SIE.DE', name: 'Siemens AG', exchange: 'XETRA' },
+      { symbol: 'ENR.DE', name: 'Siemens Energy AG', exchange: 'XETRA' },
+      { symbol: 'VOW3.DE', name: 'Volkswagen AG', exchange: 'XETRA' },
+    ];
+    return NextResponse.json(all.filter(s =>
+      s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+    ).slice(0, 6));
+  }
+
   if (endpoint === 'crisis') {
     return NextResponse.json([
       { id: 'dot_com', name: 'Dot-Com Crash', start: '2000-03-01', end: '2002-10-09', severity: 'extreme', description: 'Platzen der Technologieblase' },

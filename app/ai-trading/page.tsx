@@ -171,6 +171,59 @@ type Tab = 'scanner' | 'agent' | 'backtest' | 'stats';
 
 // ────────────────────── SCANNER TAB ───────────────────────────────────────────
 
+function TickerSearch({ onAdd }: { onAdd: (symbol: string) => void }) {
+  const { searchTicker } = useTrading();
+  const [q, setQ] = useState('');
+  const [suggestions, setSuggestions] = useState<{ symbol: string; name: string; exchange: string }[]>([]);
+  const [open, setOpen] = useState(false);
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setQ(val);
+    if (timer.current) clearTimeout(timer.current);
+    if (val.length < 2) { setSuggestions([]); setOpen(false); return; }
+    timer.current = setTimeout(async () => {
+      try {
+        const res = await searchTicker(val);
+        setSuggestions(res);
+        setOpen(res.length > 0);
+      } catch (_e) { /* ignore */ }
+    }, 350);
+  };
+
+  const pick = (symbol: string) => {
+    onAdd(symbol);
+    setQ('');
+    setSuggestions([]);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        value={q}
+        onChange={handleChange}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        placeholder="Firma oder Ticker suchen…"
+        className="w-full bg-[#0d1220] border border-[#1a1f37] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#f0b90b]/50"
+      />
+      {open && (
+        <div className="absolute z-50 top-full mt-1 w-full bg-[#0d1220] border border-[#1a1f37] rounded-lg overflow-hidden shadow-xl">
+          {suggestions.map(s => (
+            <button key={s.symbol} onMouseDown={() => pick(s.symbol)}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-[#1a1f37] transition-colors text-left">
+              <span className="text-xs font-bold text-[#f0b90b]">{s.symbol}</span>
+              <span className="text-xs text-gray-300 flex-1 ml-2 truncate">{s.name}</span>
+              <span className="text-[10px] text-gray-500 ml-2">{s.exchange}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScannerTab() {
   const { scan } = useTrading();
   const [tickers, setTickers] = useState('AAPL,MSFT,NVDA,SPY,QQQ,TSLA,AMZN,GOOGL');
@@ -180,15 +233,17 @@ function ScannerTab() {
   const [error, setError] = useState('');
   const [tickerWarnings, setTickerWarnings] = useState<string[]>([]);
 
+  const addTicker = (symbol: string) => {
+    const list = tickers.split(',').map(t => t.trim()).filter(Boolean);
+    if (!list.includes(symbol)) setTickers([...list, symbol].join(','));
+  };
+
   const runScan = async () => {
     setLoading(true);
     setError('');
     const list = tickers.split(',').map(t => t.trim()).filter(Boolean);
-
-    // Warn about invalid-looking tickers (contain spaces or are longer than 6 chars)
-    const warnings = list.filter(t => t.includes(' ') || t.length > 6);
+    const warnings = list.filter(t => t.includes(' ') || t.length > 7);
     setTickerWarnings(warnings);
-
     try {
       const data = await scan(list, profile);
       setResults(data);
@@ -205,7 +260,11 @@ function ScannerTab() {
     <div className="space-y-4">
       {/* Controls */}
       <div className="glass-card rounded-xl p-4 border border-[#1a1f37]">
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col gap-3">
+          {/* Ticker search */}
+          <TickerSearch onAdd={addTicker} />
+          {/* Ticker list + profile + scan */}
+          <div className="flex flex-col sm:flex-row gap-3">
           <input
             value={tickers}
             onChange={e => setTickers(e.target.value)}
@@ -235,6 +294,7 @@ function ScannerTab() {
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             Scan
           </button>
+        </div>
         </div>
       </div>
 

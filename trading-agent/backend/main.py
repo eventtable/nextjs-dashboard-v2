@@ -327,6 +327,27 @@ async def claude_analysis(req: ClaudeAnalysisRequest):
     return {**analysis, "indicators": indicators}
 
 
+# ── Ticker search ─────────────────────────────────────────────────────────────
+
+@app.get("/api/search")
+async def search_ticker(q: str = Query(..., min_length=2)):
+    """Search for ticker symbols by company name or symbol."""
+    import yfinance as yf
+    try:
+        results = yf.Search(q, max_results=8).quotes
+        out = []
+        for r in results:
+            symbol = r.get("symbol", "")
+            name   = r.get("longname") or r.get("shortname") or symbol
+            exch   = r.get("exchange", "")
+            qtype  = r.get("quoteType", "")
+            if symbol and qtype in ("EQUITY", "ETF", "INDEX"):
+                out.append({"symbol": symbol, "name": name, "exchange": exch})
+        return out[:6]
+    except Exception as e:
+        return []
+
+
 # ── Training state ────────────────────────────────────────────────────────────
 
 _train_lock = threading.Lock()
@@ -366,39 +387,33 @@ async def start_training(req: TrainRequest):
     global _train_thread, _train_status
     with _train_lock:
         if _train_status.get("running"):
-            # Return current progress if already running
-            from pathlib import Path
-            import json
-            progress_file = Path(__file__).parent / "data" / "train_progress.json"
-            progress = None
-            if progress_file.exists():
-                try:
-                    progress = json.loads(progress_file.read_text())
-                except Exception:
-                    pass
-            return {"started": False, "already_running": True, "progress": progress}
+            return {"started": False, "already_running": True, "progress": _get_progress()}
 
         _train_thread = threading.Thread(target=_run_training_thread, args=(req,), daemon=True)
         _train_thread.start()
         return {"started": True, "message": "Training gestartet"}
 
 
+def _get_progress():
+    from pathlib import Path
+    import json
+    for candidate in [Path("/tmp/train_progress.json"),
+                      Path(__file__).parent / "data" / "train_progress.json"]:
+        if candidate.exists():
+            try:
+                return json.loads(candidate.read_text())
+            except Exception:
+                pass
+    return None
+
+
 @app.get("/api/agent/train/status")
 async def training_status():
     """Get current training progress."""
-    from pathlib import Path
-    import json
-    progress_file = Path(__file__).parent / "data" / "train_progress.json"
-    progress = None
-    if progress_file.exists():
-        try:
-            progress = json.loads(progress_file.read_text())
-        except Exception:
-            pass
     return {
         "running": _train_status.get("running", False),
         "error":   _train_status.get("error"),
-        "progress": progress,
+        "progress": _get_progress(),
     }
 
 
