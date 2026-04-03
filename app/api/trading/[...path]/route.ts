@@ -166,17 +166,7 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
     return NextResponse.json({
       running: false,
       error: null,
-      progress: {
-        window: 48,
-        total: 98,
-        pct: 49.0,
-        updated_at: new Date().toISOString(),
-        total_trades: 4320,
-        total_wins: 2506,
-        win_rate: 58.0,
-        errors: 3,
-        last_window: '2014-01-01 → 2014-07-01',
-      },
+      progress: null,
     });
   }
 
