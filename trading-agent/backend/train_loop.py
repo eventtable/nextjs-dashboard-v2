@@ -22,6 +22,7 @@ Cron-Job (täglich um 02:00 Uhr, nimmt das letzte Quartal):
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timedelta
