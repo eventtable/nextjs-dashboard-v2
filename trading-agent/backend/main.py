@@ -147,11 +147,14 @@ async def scanner(
     weights = agent.get_weights()
 
     results = []
+    failed = []
     for ticker, df in data.items():
         if df.empty or len(df) < 50:
+            failed.append(ticker)
             continue
         indicators = compute_all(df)
         if not indicators:
+            failed.append(ticker)
             continue
         price = indicators.get("price", 0.0)
         ind = _dict_to_indicator_result(indicators, price)
@@ -169,6 +172,15 @@ async def scanner(
                 indicators=indicators,
                 recommendation=rec,
             )
+        )
+
+    if failed:
+        print(f"[scanner] Keine Daten für: {', '.join(failed)}")
+
+    if not results:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Keine Daten für Ticker: {', '.join(failed)}. Ticker-Symbole prüfen (z.B. AAPL, SAP.DE).",
         )
 
     results.sort(key=lambda x: x.score, reverse=True)

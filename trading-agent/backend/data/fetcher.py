@@ -33,28 +33,37 @@ CRISIS_EPISODES = CRISIS_PERIODS
 
 def fetch_ohlcv(ticker: str, period: str = "2y", interval: str = "1d",
                 start: str | None = None, end: str | None = None) -> pd.DataFrame:
-    """Fetch OHLCV data as a pandas DataFrame with lowercase column names."""
-    if HAS_YFINANCE:
-        try:
-            t = yf.Ticker(ticker)
-            if start:
-                df = t.history(
-                    start=start,
-                    end=end or datetime.today().strftime("%Y-%m-%d"),
-                    interval=interval,
-                )
-            else:
-                df = t.history(period=period, interval=interval)
-            if not df.empty:
-                df = df.rename(columns={
-                    "Open": "open", "High": "high",
-                    "Low": "low", "Close": "close", "Volume": "volume",
-                })
-                return df[["open", "high", "low", "close", "volume"]]
-        except Exception as e:
-            print(f"[fetcher] {ticker}: {e}")
+    """Fetch OHLCV data as a pandas DataFrame with lowercase column names.
+    Returns empty DataFrame if yfinance is unavailable or the ticker has no data.
+    """
+    if not HAS_YFINANCE:
+        print(f"[fetcher] yfinance not installed — cannot fetch {ticker}")
+        return pd.DataFrame()
 
-    return _synthetic_df(ticker, 500)
+    try:
+        t = yf.Ticker(ticker)
+        if start:
+            df = t.history(
+                start=start,
+                end=end or datetime.today().strftime("%Y-%m-%d"),
+                interval=interval,
+            )
+        else:
+            df = t.history(period=period, interval=interval)
+
+        if df.empty:
+            print(f"[fetcher] {ticker}: no data returned (invalid ticker or delisted?)")
+            return pd.DataFrame()
+
+        df = df.rename(columns={
+            "Open": "open", "High": "high",
+            "Low": "low", "Close": "close", "Volume": "volume",
+        })
+        return df[["open", "high", "low", "close", "volume"]]
+
+    except Exception as e:
+        print(f"[fetcher] {ticker}: {e}")
+        return pd.DataFrame()
 
 
 def fetch_multiple(tickers: list, period: str = "1y") -> dict:
@@ -71,21 +80,3 @@ def fetch_crisis_data(ticker: str, crisis_id: str) -> pd.DataFrame:
 
 def fetch_full_history(ticker: str) -> pd.DataFrame:
     return fetch_ohlcv(ticker, start="2001-01-01")
-
-
-def _synthetic_df(ticker: str, n: int = 500) -> pd.DataFrame:
-    seed = sum(ord(c) for c in ticker)
-    rng = np.random.default_rng(seed)
-    prices = [100.0]
-    for _ in range(n - 1):
-        prices.append(max(5.0, prices[-1] * (1 + rng.normal(0.0003, 0.012))))
-    close  = np.array(prices)
-    high   = close * (1 + rng.uniform(0.001, 0.008, n))
-    low    = close * (1 - rng.uniform(0.001, 0.008, n))
-    open_  = np.roll(close, 1); open_[0] = close[0]
-    volume = rng.integers(500_000, 5_000_000, n).astype(float)
-    dates  = pd.date_range(start="2023-01-01", periods=n, freq="D")
-    return pd.DataFrame(
-        {"open": open_, "high": high, "low": low, "close": close, "volume": volume},
-        index=dates,
-    )

@@ -11,6 +11,20 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
   const queryStr = searchParams.toString();
   const targetUrl = `${ML_API_URL}/api/${pathStr}${queryStr ? `?${queryStr}` : ''}`;
 
+  // Return backend connection status
+  if (pathStr === 'connection-status') {
+    if (!ML_API_URL) {
+      return NextResponse.json({ connected: false, reason: 'ML_API_URL nicht konfiguriert' });
+    }
+    try {
+      const res = await fetch(`${ML_API_URL}/health`, { signal: AbortSignal.timeout(5_000) });
+      if (res.ok) return NextResponse.json({ connected: true, url: ML_API_URL });
+      return NextResponse.json({ connected: false, reason: `Backend antwortet mit HTTP ${res.status}` });
+    } catch {
+      return NextResponse.json({ connected: false, reason: 'Backend nicht erreichbar' });
+    }
+  }
+
   if (ML_API_URL) {
     try {
       const init: RequestInit = {
@@ -36,10 +50,11 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
   }
 
   // ── Mock responses when backend is not available ──────────────────────────
+  // All mock responses include _mock flag so the frontend can warn the user
   const endpoint = pathStr;
 
   if (endpoint === 'health') {
-    return NextResponse.json({ status: 'mock', version: '1.0.0' });
+    return NextResponse.json({ status: 'mock', version: '1.0.0', _mock: true });
   }
 
   if (endpoint === 'search') {
@@ -83,7 +98,7 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
     const signals = ['long', 'short', 'watch', 'long', 'hold', 'short', 'long', 'watch'];
     const signalLabels: Record<string, string> = { long: 'STRONG_BUY', short: 'SELL', watch: 'NEUTRAL', hold: 'NEUTRAL' };
     return NextResponse.json(
-      tickers.map((ticker, i) => {
+      tickers.map((ticker) => {
         const score = parseFloat(((Math.random() * 16) - 8).toFixed(2));
         const sig = score > 4 ? 'long' : score < -4 ? 'short' : Math.abs(score) < 1.5 ? 'hold' : 'watch';
         const price = 100 + Math.random() * 400;
@@ -108,6 +123,7 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
             target_2: parseFloat((price + 4.0 * atr).toFixed(2)),
             reasons: ['Demo-Modus: Backend nicht verbunden'],
             profile,
+            _mock: true,
           },
         };
       })
@@ -211,6 +227,7 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
         max_drawdown_pct: parseFloat((3 + Math.random() * 12).toFixed(2)),
         sharpe_approx: parseFloat((0.4 + Math.random() * 1.2).toFixed(3)),
         weights_final: {},
+        _mock: true,
       },
       config: {},
     });

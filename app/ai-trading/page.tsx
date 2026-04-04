@@ -1048,6 +1048,33 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'stats',  label: 'Statistik', icon: BarChart2 },
 ];
 
+function BackendBanner() {
+  const [status, setStatus] = useState<{ connected: boolean; reason?: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/trading/connection-status')
+      .then(r => r.json())
+      .then(setStatus)
+      .catch(() => setStatus({ connected: false, reason: 'Statusabfrage fehlgeschlagen' }));
+  }, []);
+
+  if (!status || status.connected) return null;
+
+  return (
+    <div className="flex items-start gap-3 p-3 mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-300 text-xs">
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+      <div>
+        <span className="font-semibold">Backend nicht verbunden</span>
+        <span className="text-yellow-400/70 ml-1">— {status.reason}.</span>
+        <p className="mt-1 text-yellow-400/60">
+          Alle Daten auf dieser Seite sind <strong className="text-yellow-300">Demo-/Simulationsdaten</strong>.
+          Für echte Analysen muss die Umgebungsvariable <code className="bg-yellow-400/10 px-1 rounded">ML_API_URL</code> in Vercel gesetzt und das Railway-Backend gestartet sein.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function AITradingPage() {
   const [tab, setTab] = useState<Tab>('scanner');
 
@@ -1065,6 +1092,8 @@ export default function AITradingPage() {
             Selbstlernender Agent · Technische Analyse · Krisentraining · Walk-Forward-Backtest
           </p>
         </div>
+
+        <BackendBanner />
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-[#0d1220] rounded-xl p-1 border border-[#1a1f37]">
