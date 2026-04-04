@@ -616,14 +616,36 @@ function AgentTab() {
           sub={`Ø Win: +${fmt(s?.avg_win ?? 0, 2)}%`} />
       </div>
 
+      {/* Hint: untrained agent */}
+      {state && (s?.total ?? 0) === 0 && (
+        <div className="flex items-start gap-3 p-3 bg-blue-400/8 border border-blue-400/20 rounded-xl text-blue-200 text-xs">
+          <Cpu className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
+          <div>
+            <span className="font-semibold text-blue-300">Agent noch untrainiert</span>
+            <p className="mt-0.5 text-blue-200/70">
+              Der Agent startet mit Standard-Gewichten. Starte das historische Training (unten) oder führe Backtests durch — jeder abgeschlossene Trade verbessert die Gewichte.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Weights */}
         <div className="glass-card rounded-xl p-4 border border-[#1a1f37]">
           <h3 className="text-sm font-semibold text-white mb-3">Indikator-Gewichte</h3>
-          {state?.weights && Object.entries(state.weights).map(([k, v]) => (
-            <WeightBar key={k} label={k} value={v} max={Math.max(...Object.values(state.weights)) * 1.1} />
-          ))}
-          {!state?.weights && <div className="text-gray-500 text-sm">Lädt…</div>}
+          {loading && !state && (
+            <div className="text-gray-500 text-sm flex items-center gap-2">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Lädt…
+            </div>
+          )}
+          {state?.weights && Object.keys(state.weights).length > 0
+            ? Object.entries(state.weights).map(([k, v]) => (
+                <WeightBar key={k} label={k} value={v} max={Math.max(...Object.values(state.weights)) * 1.1} />
+              ))
+            : state && (
+                <div className="text-gray-500 text-sm">Standard-Gewichte — Training starten um sie anzupassen</div>
+              )
+          }
         </div>
 
         {/* Recent predictions */}
@@ -641,7 +663,7 @@ function AgentTab() {
               ))}
             </div>
           ) : (
-            <div className="text-gray-500 text-sm">Noch keine Vorhersagen</div>
+            <div className="text-gray-500 text-sm">Noch keine Vorhersagen — Scanner nutzen um Vorhersagen zu generieren</div>
           )}
         </div>
       </div>
@@ -1048,6 +1070,33 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'stats',  label: 'Statistik', icon: BarChart2 },
 ];
 
+function BackendBanner() {
+  const [status, setStatus] = useState<{ connected: boolean; reason?: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/trading/connection-status')
+      .then(r => r.json())
+      .then(setStatus)
+      .catch(() => setStatus({ connected: false, reason: 'Statusabfrage fehlgeschlagen' }));
+  }, []);
+
+  if (!status || status.connected) return null;
+
+  return (
+    <div className="flex items-start gap-3 p-3 mb-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-300 text-xs">
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+      <div>
+        <span className="font-semibold">Backend nicht verbunden</span>
+        <span className="text-yellow-400/70 ml-1">— {status.reason}.</span>
+        <p className="mt-1 text-yellow-400/60">
+          Alle Daten auf dieser Seite sind <strong className="text-yellow-300">Demo-/Simulationsdaten</strong>.
+          Für echte Analysen muss die Umgebungsvariable <code className="bg-yellow-400/10 px-1 rounded">ML_API_URL</code> in Vercel gesetzt und das Railway-Backend gestartet sein.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function AITradingPage() {
   const [tab, setTab] = useState<Tab>('scanner');
 
@@ -1065,6 +1114,8 @@ export default function AITradingPage() {
             Selbstlernender Agent · Technische Analyse · Krisentraining · Walk-Forward-Backtest
           </p>
         </div>
+
+        <BackendBanner />
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 bg-[#0d1220] rounded-xl p-1 border border-[#1a1f37]">

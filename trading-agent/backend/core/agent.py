@@ -14,7 +14,12 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from typing import Literal
 
-STATE_FILE_DEFAULT = os.path.join(os.path.dirname(__file__), "..", "agent_state.json")
+# Allow override via env var so Railway volumes can be used:
+# Set AGENT_STATE_FILE=/data/agent_state.json in Railway and mount a volume at /data
+STATE_FILE_DEFAULT = os.environ.get(
+    "AGENT_STATE_FILE",
+    os.path.join(os.path.dirname(__file__), "..", "agent_state.json"),
+)
 
 Profile = Literal["momentum", "swing", "position"]
 
