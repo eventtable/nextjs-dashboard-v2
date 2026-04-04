@@ -8,7 +8,13 @@ from dataclasses import dataclass, field
 from typing import Literal
 import numpy as np
 
-from .indicators import calc_all_indicators, compute_all
+from .indicators import (
+    calc_all_indicators, compute_all,
+    rsi as ind_rsi, macd as ind_macd, ema as ind_ema,
+    bollinger_bands as ind_bb, atr as ind_atr, supertrend as ind_supertrend,
+    fibonacci_levels as ind_fib, adx as ind_adx, cci as ind_cci,
+    obv as ind_obv, stochastic as ind_stoch,
+)
 from .scoring import score_stock, Profile
 from .agent import TradingAgent, _dict_to_indicator_result
 
@@ -120,10 +126,64 @@ def _run_backtest_on_df(df, config: BacktestConfig, agent: TradingAgent | None,
     min_bars  = 60
     in_trade  = None
 
+    # ── Precompute all indicator series once — O(n) instead of O(n²) ───────────
+    def _safe(s, i, fallback):
+        try:
+            v = s.iloc[i]
+            return fallback if pd.isna(v) else float(v)
+        except Exception:
+            return fallback
+
+    rsi_s   = ind_rsi(df)
+    macd_df = ind_macd(df)
+    ema20_s = ind_ema(df, 20)
+    ema50_s = ind_ema(df, 50)
+    ema200_s = ind_ema(df, 200)
+    bb_df   = ind_bb(df)
+    atr_s   = ind_atr(df)
+    st_df   = ind_supertrend(df)
+    adx_df  = ind_adx(df)
+    cci_s   = ind_cci(df)
+    obv_s   = ind_obv(df)
+    stoch_df = ind_stoch(df)
+    fib_vals = ind_fib(df)   # single snapshot — ok for walk-forward
+
+    def _indicators_at(i: int):
+        price = float(close[i])
+        obv_trend = (
+            1 if obv_s.iloc[i] > obv_s.iloc[max(0, i - 5)] else -1
+        )
+        return {
+            "price":               price,
+            "rsi":                 _safe(rsi_s, i, 50.0),
+            "macd":                _safe(macd_df["macd"], i, 0.0),
+            "macd_signal":         _safe(macd_df["signal"], i, 0.0),
+            "macd_hist":           _safe(macd_df["hist"], i, 0.0),
+            "ema20":               _safe(ema20_s, i, price),
+            "ema50":               _safe(ema50_s, i, price),
+            "ema200":              _safe(ema200_s, i, price),
+            "bb_upper":            _safe(bb_df["upper"], i, price * 1.02),
+            "bb_mid":              _safe(bb_df["mid"], i, price),
+            "bb_lower":            _safe(bb_df["lower"], i, price * 0.98),
+            "bb_pct_b":            _safe(bb_df["pct_b"], i, 0.5),
+            "bb_width":            _safe(bb_df["width"], i, 0.05),
+            "atr":                 _safe(atr_s, i, price * 0.02),
+            "atr_pct":             (_safe(atr_s, i, 0.0) / price * 100) if price > 0 else 2.0,
+            "supertrend":          _safe(st_df["supertrend"], i, price),
+            "supertrend_direction": int(_safe(st_df["direction"], i, 0)),
+            "fibonacci":           {str(k): float(v) for k, v in fib_vals.items()},
+            "adx":                 _safe(adx_df["adx"], i, 20.0),
+            "plus_di":             _safe(adx_df["plus_di"], i, 25.0),
+            "minus_di":            _safe(adx_df["minus_di"], i, 25.0),
+            "cci":                 _safe(cci_s, i, 0.0),
+            "obv":                 _safe(obv_s, i, 0.0),
+            "obv_trend":           obv_trend,
+            "stoch_k":             _safe(stoch_df["k"], i, 50.0),
+            "stoch_d":             _safe(stoch_df["d"], i, 50.0),
+        }
+
     for i in range(min_bars, n - 1):
-        indicators = compute_all(df.iloc[:i + 1])
-        if not indicators:
-            continue
+        indicators = _indicators_at(i)
         price = close[i]
         active_profile = profiles[i % len(profiles)]
         ind = _dict_to_indicator_result(indicators, price)

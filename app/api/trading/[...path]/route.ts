@@ -23,7 +23,10 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
         if (body) init.body = body;
       }
 
-      const res = await fetch(targetUrl, init);
+      const res = await fetch(targetUrl, {
+        ...init,
+        signal: AbortSignal.timeout(55_000),
+      });
       const data = await res.json();
       return NextResponse.json(data, { status: res.status });
     } catch (err) {

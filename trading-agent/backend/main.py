@@ -1,8 +1,12 @@
 """FastAPI trading agent backend server."""
+import asyncio
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Any, Dict, Optional
 from datetime import datetime
+
+_executor = ThreadPoolExecutor(max_workers=4)
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -207,7 +211,7 @@ async def predict(
 
 @app.post("/api/backtest")
 async def backtest(req: BacktestRequest):
-    """Run a walk-forward backtest."""
+    """Run a walk-forward backtest with a 30s timeout."""
     config = BacktestConfig(
         ticker=req.ticker.upper(),
         profile=req.profile,
@@ -216,7 +220,14 @@ async def backtest(req: BacktestRequest):
         initial_capital=req.initial_capital,
         commission=req.commission,
     )
-    result = run_backtest(config, agent)
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(_executor, run_backtest, config, agent),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Backtest timeout (>30s) — Zeitraum verkürzen oder später erneut versuchen")
     return {
         "equity_curve": result.equity_curve,
         "trades":       result.trades,
@@ -233,14 +244,18 @@ async def get_crises():
 
 @app.post("/api/crisis/backtest")
 async def crisis_backtest(req: CrisisBacktestRequest):
-    """Run backtest over a specific crisis episode."""
-    result = run_crisis_backtest(
-        ticker=req.ticker.upper(),
-        profile=req.profile,
-        crisis_id=req.crisis_id,
-        agent=agent,
-        initial_capital=req.capital,
-    )
+    """Run backtest over a specific crisis episode with a 30s timeout."""
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(
+                _executor, run_crisis_backtest,
+                req.ticker.upper(), req.profile, req.crisis_id, agent, req.capital,
+            ),
+            timeout=30.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Backtest timeout (>30s) — Krisenperiode oder Ticker prüfen")
     return {
         "equity_curve": result.equity_curve,
         "trades":       result.trades,
