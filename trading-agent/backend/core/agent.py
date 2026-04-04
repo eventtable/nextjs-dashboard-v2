@@ -14,6 +14,22 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from typing import Literal
 
+import numpy as np
+
+
+class _NumpyEncoder(json.JSONEncoder):
+    """Converts numpy scalars/arrays to native Python types for JSON serialization."""
+    def default(self, o):
+        if isinstance(o, np.bool_):
+            return bool(o)
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return float(o)
+        if isinstance(o, np.ndarray):
+            return o.tolist()
+        return super().default(o)
+
 # Allow override via env var so Railway volumes can be used:
 # Set AGENT_STATE_FILE=/data/agent_state.json in Railway and mount a volume at /data
 STATE_FILE_DEFAULT = os.environ.get(
@@ -118,7 +134,7 @@ class TradingAgent:
     def save_state(self):
         self.state.updated_at = datetime.now(timezone.utc).isoformat()
         with open(self._state_file, "w") as f:
-            f.write(json.dumps(asdict(self.state), indent=2))
+            f.write(json.dumps(asdict(self.state), indent=2, cls=_NumpyEncoder))
 
     def reset(self):
         self.state = AgentState()
