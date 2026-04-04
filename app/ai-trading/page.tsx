@@ -744,7 +744,11 @@ function BacktestTab() {
     setBtLoading(true); setBtError(''); setBtResult(null);
     try {
       const r = await runBacktest(ticker.toUpperCase(), profile, startDate, endDate, Number(capital));
-      setBtResult(r);
+      if (r.metrics?.error) {
+        setBtError(r.metrics.error);
+      } else {
+        setBtResult(r);
+      }
     } catch (e) {
       setBtError(e instanceof Error ? e.message : 'Fehler');
     } finally {
@@ -757,7 +761,11 @@ function BacktestTab() {
     setCrisisLoading(true); setCrisisError(''); setCrisisResult(null);
     try {
       const r = await runCrisisBacktest(crisisTicker.toUpperCase(), selectedCrisis, crisisProfile, Number(capital));
-      setCrisisResult(r);
+      if (r.metrics?.error) {
+        setCrisisError(r.metrics.error);
+      } else {
+        setCrisisResult(r);
+      }
     } catch (e) {
       setCrisisError(e instanceof Error ? e.message : 'Fehler');
     } finally {
