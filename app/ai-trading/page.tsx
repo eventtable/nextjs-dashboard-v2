@@ -616,14 +616,36 @@ function AgentTab() {
           sub={`Ø Win: +${fmt(s?.avg_win ?? 0, 2)}%`} />
       </div>
 
+      {/* Hint: untrained agent */}
+      {state && (s?.total ?? 0) === 0 && (
+        <div className="flex items-start gap-3 p-3 bg-blue-400/8 border border-blue-400/20 rounded-xl text-blue-200 text-xs">
+          <Cpu className="w-4 h-4 shrink-0 mt-0.5 text-blue-400" />
+          <div>
+            <span className="font-semibold text-blue-300">Agent noch untrainiert</span>
+            <p className="mt-0.5 text-blue-200/70">
+              Der Agent startet mit Standard-Gewichten. Starte das historische Training (unten) oder führe Backtests durch — jeder abgeschlossene Trade verbessert die Gewichte.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Weights */}
         <div className="glass-card rounded-xl p-4 border border-[#1a1f37]">
           <h3 className="text-sm font-semibold text-white mb-3">Indikator-Gewichte</h3>
-          {state?.weights && Object.entries(state.weights).map(([k, v]) => (
-            <WeightBar key={k} label={k} value={v} max={Math.max(...Object.values(state.weights)) * 1.1} />
-          ))}
-          {!state?.weights && <div className="text-gray-500 text-sm">Lädt…</div>}
+          {loading && !state && (
+            <div className="text-gray-500 text-sm flex items-center gap-2">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Lädt…
+            </div>
+          )}
+          {state?.weights && Object.keys(state.weights).length > 0
+            ? Object.entries(state.weights).map(([k, v]) => (
+                <WeightBar key={k} label={k} value={v} max={Math.max(...Object.values(state.weights)) * 1.1} />
+              ))
+            : state && (
+                <div className="text-gray-500 text-sm">Standard-Gewichte — Training starten um sie anzupassen</div>
+              )
+          }
         </div>
 
         {/* Recent predictions */}
@@ -641,7 +663,7 @@ function AgentTab() {
               ))}
             </div>
           ) : (
-            <div className="text-gray-500 text-sm">Noch keine Vorhersagen</div>
+            <div className="text-gray-500 text-sm">Noch keine Vorhersagen — Scanner nutzen um Vorhersagen zu generieren</div>
           )}
         </div>
       </div>
