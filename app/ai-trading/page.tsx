@@ -595,7 +595,7 @@ function AgentTab() {
       <div className="flex items-center justify-between">
         <p className="text-gray-400 text-sm">Gelernter Trading-Agent · Selbstoptimierend</p>
         <div className="flex gap-2">
-          <button onClick={load} disabled={loading}
+          <button onClick={() => load()} disabled={loading}
             className="p-2 rounded-lg bg-[#1a1f37] text-gray-400 hover:text-white transition-colors">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
