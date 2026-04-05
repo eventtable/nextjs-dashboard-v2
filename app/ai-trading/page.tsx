@@ -553,20 +553,28 @@ function AgentTab() {
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const load = useCallback(async (silent = false) => {
+    if (!silent) { setLoading(true); setError(''); }
     try {
       const data = await getAgentState();
       setState(data);
+      if (silent) setError(''); // clear stale error once we succeed
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Fehler');
+      // Only surface error on initial load (no data yet); during background
+      // refreshes (silent=true) the backend may be busy with training — ignore.
+      if (!silent) setError(e instanceof Error ? e.message : 'Fehler');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [getAgentState]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Background refresh every 6s so stats update while training runs
+  useEffect(() => {
+    const id = setInterval(() => load(true), 6000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const handleReset = async () => {
     if (!confirm('Agent zurücksetzen? Alle gelernten Gewichte gehen verloren.')) return;
@@ -585,9 +593,12 @@ function AgentTab() {
     <div className="space-y-4">
       {/* Header controls */}
       <div className="flex items-center justify-between">
-        <p className="text-gray-400 text-sm">Gelernter Trading-Agent · Selbstoptimierend</p>
+        <p className="text-gray-400 text-sm">
+          Gelernter Trading-Agent · Selbstoptimierend
+          <span className="ml-2 text-[10px] text-gray-600 font-mono">v2.1.2</span>
+        </p>
         <div className="flex gap-2">
-          <button onClick={load} disabled={loading}
+          <button onClick={() => load()} disabled={loading}
             className="p-2 rounded-lg bg-[#1a1f37] text-gray-400 hover:text-white transition-colors">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>

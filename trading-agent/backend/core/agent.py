@@ -136,6 +136,10 @@ class TradingAgent:
         with open(self._state_file, "w") as f:
             f.write(json.dumps(asdict(self.state), indent=2, cls=_NumpyEncoder))
 
+    def reload(self):
+        """Reload state from disk (call after an external process updated the file)."""
+        self.state = self._load_state()
+
     def reset(self):
         self.state = AgentState()
         self.save_state()
