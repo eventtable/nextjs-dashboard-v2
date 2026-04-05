@@ -553,20 +553,28 @@ function AgentTab() {
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const load = useCallback(async (silent = false) => {
+    if (!silent) { setLoading(true); setError(''); }
     try {
       const data = await getAgentState();
       setState(data);
+      if (silent) setError(''); // clear stale error once we succeed
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Fehler');
+      // Only surface error on initial load (no data yet); during background
+      // refreshes (silent=true) the backend may be busy with training — ignore.
+      if (!silent) setError(e instanceof Error ? e.message : 'Fehler');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [getAgentState]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Background refresh every 6s so stats update while training runs
+  useEffect(() => {
+    const id = setInterval(() => load(true), 6000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const handleReset = async () => {
     if (!confirm('Agent zurücksetzen? Alle gelernten Gewichte gehen verloren.')) return;
