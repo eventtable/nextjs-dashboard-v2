@@ -217,7 +217,7 @@ def _run_backtest_on_df(df, config: BacktestConfig, agent: TradingAgent | None,
                        else (in_trade["entry_price"] - ep) / in_trade["entry_price"])
                 pnl -= commission  # subtract commission
 
-                position_size = capital * 0.10
+                position_size = capital * 0.05
                 capital += position_size * pnl
 
                 bt = BacktestTrade(
