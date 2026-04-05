@@ -72,7 +72,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from core.agent    import TradingAgent
 from core.backtest import BacktestConfig, run_backtest
 
-STATE_FILE = str(Path(__file__).parent / "data" / "state" / "agent_state.json")
+STATE_FILE = os.environ.get(
+    "AGENT_STATE_FILE",
+    str(Path(__file__).parent / "data" / "state" / "agent_state.json"),
+)
 
 
 def log(msg: str):
