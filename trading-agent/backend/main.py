@@ -41,7 +41,10 @@ app.add_middleware(
 
 # ── Global instances ───────────────────────────────────────────────────────────
 
-STATE_FILE = os.path.join(os.path.dirname(__file__), "data", "state", "agent_state.json")
+STATE_FILE = os.environ.get(
+    "AGENT_STATE_FILE",
+    os.path.join(os.path.dirname(__file__), "data", "state", "agent_state.json"),
+)
 os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
 
 agent = TradingAgent(state_file=STATE_FILE)
