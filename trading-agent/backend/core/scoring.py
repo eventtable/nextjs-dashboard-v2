@@ -162,11 +162,11 @@ def score_stock(
     else:              signal = "watch"
 
     atr = ind.atr or price * 0.01
-    if signal in ("long", "watch"):
+    if signal in ("long", "watch", "hold"):
         stop_loss = round(price - 1.5 * atr, 2)
         target_1  = round(price + 2.0 * atr, 2)
         target_2  = round(price + 4.0 * atr, 2)
-    else:
+    else:  # short only
         stop_loss = round(price + 1.5 * atr, 2)
         target_1  = round(price - 2.0 * atr, 2)
         target_2  = round(price - 4.0 * atr, 2)
