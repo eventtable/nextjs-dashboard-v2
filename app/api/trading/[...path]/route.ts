@@ -191,11 +191,13 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
 
   if (endpoint === 'backtest' || endpoint === 'crisis/backtest') {
     // Do NOT return fake data — a backtest with wrong dates is worse than no result.
-    // Return a clear error so the user knows the backend is unreachable.
-    return NextResponse.json(
-      { metrics: { error: 'Backend nicht erreichbar — Backtest konnte nicht ausgeführt werden. Bitte kurz warten und erneut versuchen.' } },
-      { status: 503 }
-    );
+    // Return metrics.error so the frontend's existing error handler shows it cleanly.
+    return NextResponse.json({
+      equity_curve: [],
+      trades: [],
+      metrics: { error: 'Backend nicht erreichbar — Backtest konnte nicht ausgeführt werden. Bitte kurz warten und erneut versuchen.' },
+      config: {},
+    });
   }
 
   if (endpoint === 'claude-analysis') {
