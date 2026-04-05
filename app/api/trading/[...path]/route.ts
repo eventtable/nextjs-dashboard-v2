@@ -190,47 +190,12 @@ async function proxyRequest(req: NextRequest, context: RouteContext): Promise<Ne
   }
 
   if (endpoint === 'backtest' || endpoint === 'crisis/backtest') {
-    const now = new Date();
-    let capital = 10000;
-    const equity_curve = Array.from({ length: 60 }, (_, i) => {
-      capital *= (1 + (Math.random() - 0.42) * 0.025);
-      return {
-        date: new Date(now.getTime() - (59 - i) * 86400000).toISOString().split('T')[0],
-        value: parseFloat(capital.toFixed(2)),
-      };
-    });
-    const finalCapital = equity_curve[equity_curve.length - 1].value;
-    const totalReturn = parseFloat(((finalCapital - 10000) / 10000 * 100).toFixed(2));
-    const wins = 8 + Math.floor(Math.random() * 6);
-    const losses = 4 + Math.floor(Math.random() * 4);
-    const trades = Array.from({ length: wins + losses }, (_, i) => {
-      const isWin = i < wins;
-      const pnl = isWin ? parseFloat((1 + Math.random() * 4).toFixed(2)) : parseFloat((-0.5 - Math.random() * 2.5).toFixed(2));
-      const entryDate = new Date(now.getTime() - (wins + losses - i) * 3 * 86400000).toISOString().split('T')[0];
-      const exitDate = new Date(new Date(entryDate).getTime() + (2 + Math.floor(Math.random() * 10)) * 86400000).toISOString().split('T')[0];
-      return { entry_date: entryDate, exit_date: exitDate, direction: Math.random() > 0.3 ? 'long' : 'short', entry_price: 150 + Math.random() * 100, exit_price: 150 + Math.random() * 100, pnl_pct: pnl, profit: isWin, hold_days: 2 + Math.floor(Math.random() * 10) };
-    });
-    return NextResponse.json({
-      equity_curve,
-      trades,
-      metrics: {
-        total_return_pct: totalReturn,
-        final_capital: finalCapital,
-        initial_capital: 10000,
-        win_rate: parseFloat((wins / (wins + losses) * 100).toFixed(1)),
-        total_trades: wins + losses,
-        wins,
-        losses,
-        avg_win_pct: parseFloat((1.5 + Math.random() * 2).toFixed(2)),
-        avg_loss_pct: parseFloat((-0.8 - Math.random() * 1.5).toFixed(2)),
-        risk_reward: parseFloat((1.2 + Math.random() * 1.5).toFixed(2)),
-        max_drawdown_pct: parseFloat((3 + Math.random() * 12).toFixed(2)),
-        sharpe_approx: parseFloat((0.4 + Math.random() * 1.2).toFixed(3)),
-        weights_final: {},
-        _mock: true,
-      },
-      config: {},
-    });
+    // Do NOT return fake data — a backtest with wrong dates is worse than no result.
+    // Return a clear error so the user knows the backend is unreachable.
+    return NextResponse.json(
+      { metrics: { error: 'Backend nicht erreichbar — Backtest konnte nicht ausgeführt werden. Bitte kurz warten und erneut versuchen.' } },
+      { status: 503 }
+    );
   }
 
   if (endpoint === 'claude-analysis') {
