@@ -404,9 +404,9 @@ def _run_training_thread(req: TrainRequest):
         print(f"[TRAIN ERROR] {_train_status['error']}", flush=True)
     finally:
         _train_status["running"] = False
-        # Refresh agent weights from saved state
+        # Refresh in-memory agent from the state file the training loop wrote
         try:
-            agent.load_state()
+            agent.reload()
         except Exception:
             pass
 
