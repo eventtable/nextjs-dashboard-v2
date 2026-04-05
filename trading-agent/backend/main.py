@@ -400,7 +400,7 @@ def _run_training_thread(req: TrainRequest):
             end=req.to_date,
             window_months=req.window_months,
             step_months=req.step_months,
-            resume=True,
+            resume=False,  # fresh start on manual trigger; old progress file is ignored
         )
     except Exception as e:
         _train_status["error"] = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
