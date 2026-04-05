@@ -593,7 +593,10 @@ function AgentTab() {
     <div className="space-y-4">
       {/* Header controls */}
       <div className="flex items-center justify-between">
-        <p className="text-gray-400 text-sm">Gelernter Trading-Agent · Selbstoptimierend</p>
+        <p className="text-gray-400 text-sm">
+          Gelernter Trading-Agent · Selbstoptimierend
+          <span className="ml-2 text-[10px] text-gray-600 font-mono">v2.1.2</span>
+        </p>
         <div className="flex gap-2">
           <button onClick={() => load()} disabled={loading}
             className="p-2 rounded-lg bg-[#1a1f37] text-gray-400 hover:text-white transition-colors">
